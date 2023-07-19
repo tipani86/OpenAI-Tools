@@ -1,0 +1,25 @@
+#MainMenu {
+    visibility: hidden;
+}
+
+header {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+
+.viewerBadge_container__1QSob {
+    visibility: hidden;
+}
+
+.appview-container .main .block-container {
+    padding-top: 3rem;
+    padding-bottom: 0rem;
+}
+
+.appview-container .css-163ttbj .css-1vq4p4l {
+    padding-top: 2rem;
+    padding-bottom: 0rem;
+}
