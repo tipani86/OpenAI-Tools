@@ -37,8 +37,7 @@ with st.sidebar:
     st.text_input(label="openai_api_key", key="openai_api_key", placeholder="Your OpenAI API Key", label_visibility="collapsed")
     st.text_input(label="openai_org_id", key="openai_org_id", placeholder="Your OpenAI Organization ID", label_visibility="collapsed")
     st.caption("_**Author's Note:** While I can only claim that your credentials are not stored anywhere, for maximum security, you should generate a new app-specific API key on your OpenAI account page and use it here. That way, you can deactivate that key after you don't plan to use this app anymore, and it won't affect any of your other apps._")
-    if st.button("Rerun"):
-        st.experimental_rerun()
+    st.markdown('<a href="https://github.com/tipani86/OpenAI-Tools"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/tipani86/OpenAI-Tools?style=social"></a>', unsafe_allow_html=True)
 
 # Gate the loading of the rest of the page if the user hasn't entered their credentials
 openai_api_key = st.session_state.get("openai_api_key", "")
