@@ -1,11 +1,15 @@
 import os
+import json
+import openai
 import aiohttp
 import asyncio
 import argparse
+import tiktoken
 import pandas as pd
 from stqdm import stqdm
 from loguru import logger
 from random import randint
+from collections import defaultdict
 from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -13,6 +17,124 @@ TIMEOUT = 60
 N_RETRIES = 1
 BACKOFF = 5
 MULTIPLIER = 1.5
+
+# Token counting functions
+encoding = tiktoken.get_encoding("cl100k_base")
+
+# not exact!
+# simplified from https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb
+def num_tokens_from_messages(messages, tokens_per_message=3, tokens_per_name=1):
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":
+                num_tokens += tokens_per_name
+    num_tokens += 3
+    return num_tokens
+
+def num_assistant_tokens_from_messages(messages):
+    num_tokens = 0
+    for message in messages:
+        if message["role"] == "assistant":
+            num_tokens += len(encoding.encode(message["content"]))
+    return num_tokens
+
+def check_finetune_dataset(data) -> dict:
+    # Adapted from https://platform.openai.com/docs/guides/fine-tuning/preparing-your-dataset
+
+    if not isinstance(data, list):
+        dataset = [json.loads(line) for line in data]
+    else:
+        dataset = data
+
+    # Format error checks and warnings and statistics
+    format_errors = defaultdict(int)
+
+    n_messages = []
+    convo_lens = []
+    assistant_message_lens = []
+
+    for ex in dataset:
+        if not isinstance(ex, dict):
+            format_errors["data_type"] += 1
+            continue
+
+        messages = ex.get("messages", None)
+        if not messages:
+            format_errors["missing_messages_list"] += 1
+            continue
+
+        for message in messages:
+            if "role" not in message or "content" not in message:
+                format_errors["message_missing_key"] += 1
+
+            if any(k not in ("role", "content", "name") for k in message):
+                format_errors["message_unrecognized_key"] += 1
+
+            if message.get("role", None) not in ("system", "user", "assistant"):
+                format_errors["unrecognized_role"] += 1
+
+            content = message.get("content", None)
+            if not content or not isinstance(content, str):
+                format_errors["missing_content"] += 1
+
+        if not any(message.get("role", None) == "system" for message in messages):
+            format_errors["warn_n_missing_system"] += 1
+        if not any(message.get("role", None) == "user" for message in messages):
+            format_errors["warn_n_missing_user"] += 1
+        if not any(message.get("role", None) == "assistant" for message in messages):
+            format_errors["warn_n_missing_assistant_message"] += 1
+        n_messages.append(len(messages))
+        convo_lens.append(num_tokens_from_messages(messages))
+        assistant_message_lens.append(num_assistant_tokens_from_messages(messages))
+
+    n_too_long = sum(1 for l in convo_lens if l > 4096)
+    if n_too_long > 0:
+        format_errors["n_too_long"] = n_too_long
+
+    res = {
+        "n_messages": n_messages,
+        "convo_lens": convo_lens,
+        "assistant_message_lens": assistant_message_lens,
+        "format_errors": format_errors,
+        "dataset": dataset,
+    }
+
+    return res
+
+def estimate_training_tokens(
+    dataset: list[dict],
+    convo_lens: list[int],
+    epochs: int=3
+) -> dict:
+    # Adapted from https://platform.openai.com/docs/guides/fine-tuning/preparing-your-dataset
+
+    # Pricing and default n_epochs estimate
+    MAX_TOKENS_PER_EXAMPLE = 4096
+
+    MIN_TARGET_EXAMPLES = 100
+    MAX_TARGET_EXAMPLES = 25000
+    TARGET_EPOCHS = epochs
+    MIN_EPOCHS = 1
+    MAX_EPOCHS = 25
+
+    n_epochs = TARGET_EPOCHS
+    n_train_examples = len(dataset)
+    if n_train_examples * TARGET_EPOCHS < MIN_TARGET_EXAMPLES:
+        n_epochs = min(MAX_EPOCHS, MIN_TARGET_EXAMPLES // n_train_examples)
+    elif n_train_examples * TARGET_EPOCHS > MAX_TARGET_EXAMPLES:
+        n_epochs = max(MIN_EPOCHS, MAX_TARGET_EXAMPLES // n_train_examples)
+
+    n_billing_tokens = sum(min(MAX_TOKENS_PER_EXAMPLE, length) for length in convo_lens)
+
+    res = {
+        "n_billing_tokens": n_billing_tokens,
+        "n_epochs": n_epochs,
+    }
+
+    return res
 
 class OpenAITools:
 
@@ -24,7 +146,7 @@ class OpenAITools:
     async def get_users(self,
         openai_api_key: str,
         openai_org_id: str,
-    ):
+    ) -> dict:
         path = f"/organizations/{openai_org_id}/users"
         res = await self.request(openai_api_key, openai_org_id, "GET", path)
         # Users data are under the "members" object, plus we also need
@@ -39,12 +161,62 @@ class OpenAITools:
         users["data"] = output
         return users
     
+    async def get_files(self,
+        openai_api_key: str,
+        openai_org_id: str,
+    ) -> dict:
+        path = "/files"
+        headers = {
+            "Authorization": f"Bearer {openai_api_key}",
+        }
+        res = await self.request(
+            openai_api_key, openai_org_id, "GET", path,
+            headers=headers)
+        return res
+    
+    async def view_file_contents(self,
+        openai_api_key: str,
+        openai_org_id: str,
+        file_id: str,
+    ):
+        path = f"/files/{file_id}/content"
+        headers = {
+            "Authorization": f"Bearer {openai_api_key}",
+        }
+        res = await self.request(
+            openai_api_key, openai_org_id, "GET", path,
+            headers=headers)
+        return res
+
+    async def delete_file(self,
+        openai_api_key: str,
+        openai_org_id: str,
+        file_id: str,
+    ):
+        path = f"/files/{file_id}"
+        headers = {
+            "Authorization": f"Bearer {openai_api_key}",
+        }
+        res = await self.request(
+            openai_api_key, openai_org_id, "DELETE", path,
+            headers=headers)
+        return res
+    
+    async def upload_file(self,
+        file,
+    ):
+        res = await openai.File.acreate(
+            file=file.getvalue(),
+            purpose="fine-tune",
+            user_provided_filename=file.name)
+        return res
+    
     async def get_overall_usage(self,
         openai_api_key: str,
         openai_org_id: str,
         date_range: list[str],
     ):
-        path = f"/dashboard/billing/usage"
+        path = "/dashboard/billing/usage"
         params = {
             "start_date": date_range[0],
             "end_date": date_range[1],
@@ -94,7 +266,7 @@ class OpenAITools:
         path: str,
         params: dict = {},
         headers: dict = {},
-        data: dict | None = None,
+        data: aiohttp.FormData | dict | None = None,
     ):
         headers.update({
             "authorization": f"Bearer {openai_api_key}",
@@ -106,10 +278,17 @@ class OpenAITools:
         logger.debug(f"Requesting {method} {uri} with params {params} and headers {headers}")
         if data:
             logger.debug(f"Request data: {data}")
+            if isinstance(data, dict):
+                # Convert dict into aiohttp FormData
+                data = aiohttp.FormData(data)
         async with aiohttp.ClientSession() as session:
-            async with session.request(method, uri, params=params, headers=headers, json=data) as resp:
+            async with session.request(method, uri, params=params, headers=headers, data=data) as resp:
                 if resp.status == 200:
-                    return await resp.json()
+                    content_type = resp.headers["Content-Type"]
+                    if content_type == "application/json":
+                        return await resp.json()
+                    else:
+                        return await resp.read()
                 else:
                     raise Exception(f"Request failed with status {resp.status}")
 
