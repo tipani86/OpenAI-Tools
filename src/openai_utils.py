@@ -211,6 +211,32 @@ class OpenAITools:
             user_provided_filename=file.name)
         return res
     
+    async def get_finetune_jobs(self,
+        openai_api_key: str,
+        openai_org_id: str,
+    ) -> dict:
+        path = "/fine_tuning/jobs"
+        headers = {
+            "Authorization": f"Bearer {openai_api_key}",
+        }
+        res = await self.request(
+            openai_api_key, openai_org_id, "GET", path,
+            headers=headers)
+        return res
+    
+    async def get_models(self,
+        openai_api_key: str,
+        openai_org_id: str,
+    ) -> dict:
+        path = "/models"
+        headers = {
+            "Authorization": f"Bearer {openai_api_key}",
+        }
+        res = await self.request(
+            openai_api_key, openai_org_id, "GET", path,
+            headers=headers)
+        return res
+    
     async def get_overall_usage(self,
         openai_api_key: str,
         openai_org_id: str,

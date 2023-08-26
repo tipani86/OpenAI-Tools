@@ -68,7 +68,7 @@ with st.sidebar:
     st.text_input(label="openai_api_key", key="openai_api_key", placeholder="Your OpenAI API Key", label_visibility="collapsed")
     st.text_input(label="openai_org_id", key="openai_org_id", placeholder="Your OpenAI Organization ID", label_visibility="collapsed")
     st.caption("_**Author's Note:** While I can only claim that your credentials are not stored anywhere, for maximum security, you should generate a new app-specific API key on your OpenAI account page and use it here. That way, you can deactivate that key after you don't plan to use this app anymore, and it won't affect any of your other apps. You can check out the GitHub source for this app using below button:_")
-    st.markdown('<a href="https://github.com/tipani86/OpenAI-Tools"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/tipani86/OpenAI-Tools?style=social"></a>', unsafe_allow_html=True)
+    st.markdown('<a href="https://github.com/tipani86/OpenAI-Tools"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/tipani86/OpenAI-Tools?style=social"></a><br><small>Page views: <img src="https://www.cutercounter.com/hits.php?id=hxncoqd&nd=4&style=1" border="0" alt="visitor counter"></small>', unsafe_allow_html=True)
     if DEBUG:
         if st.button("Reload page"):
             st.experimental_rerun()
@@ -84,30 +84,40 @@ if len(openai_api_key) == 0 or len(openai_org_id) == 0:
 # Initialize OpenAI utils
 openai_tool_op = OpenAITools()
 
-async def get_users() -> list:
+async def get_users() -> dict:
     return await openai_tool_op.get_users(openai_api_key, openai_org_id)
 
-async def get_files() -> list:
+async def get_files() -> dict:
     return await openai_tool_op.get_files(openai_api_key, openai_org_id)
 
-async def view_file_contents(file_id: str) -> list:
+async def view_file_contents(file_id: str) -> bytes:
     return await openai_tool_op.view_file_contents(openai_api_key, openai_org_id, file_id)
 
-async def delete_file(file_id: str) -> dict:
+async def delete_file(file_id: str) -> dict | None:
     return await openai_tool_op.delete_file(openai_api_key, openai_org_id, file_id)
+
+async def get_finetune_jobs() -> dict:
+    return await openai_tool_op.get_finetune_jobs(openai_api_key, openai_org_id)
+
+async def get_models() -> dict:
+    return await openai_tool_op.get_models(openai_api_key, openai_org_id)
 
 # Define main layout
 
 async def main():
     with st.spinner("Loading data..."):
-        users_res = await get_users()
-        files_res = await get_files()
+        # Use async to group data loading tasks in parallel
+
+        users_res, files_res, finetune_jobs_res, models_res = await asyncio.gather(
+            get_users(), get_files(), get_finetune_jobs(), get_models()
+        )
 
     with st.expander("**My Organization's Users**", expanded=True):
         users_df = pd.DataFrame(users_res["data"])
-        # Convert "created" column to datetime
         users_df["created"] = pd.to_datetime(users_df["created"], unit="s")
-        st.dataframe(users_df[["created", "role", "name"]].set_index("created", inplace=False))
+        users_df = users_df.set_index("created")
+        users_df.index.rename("created at (UTC)", inplace=True)
+        st.dataframe(users_df[["role", "name"]])
 
     with st.expander("**Token Usage**", expanded=False):
         def get_user_name(id: str) -> str:
@@ -150,20 +160,15 @@ async def main():
         st.stop()
 
     with st.expander("**Model Fine-Tuning**", expanded=False):
-        upload_column, files_column = st.columns(2)
+        files_column, finetune_jobs_column = st.columns(2)
+
+        with finetune_jobs_column:
+            st.caption("Finetuning Jobs")
+            if len(finetune_jobs_res["data"]) == 0:
+                st.info("No finetuning jobs found. Start a new job by uploading/reviewing a dataset file below.")
 
         with files_column:
-            st.caption("Uploaded Files")
-            if len(files_res["data"]) == 0:
-                st.text("No files found.")
-            else:
-                files_df = pd.DataFrame(files_res["data"])
-                files_df = files_df[["created_at", "id", "filename", "bytes", "purpose"]].set_index("created_at")
-                files_df.index = pd.to_datetime(files_df.index, unit="s")
-                st.dataframe(files_df)
-
-        with upload_column:
-            st.caption("Upload `JsonLines` File(s)")
+            st.caption("Upload New `JsonLines` File(s)")
             with st.form("upload_form", clear_on_submit=True):
                 upload_files = st.file_uploader("Upload", label_visibility="collapsed", type="jsonl", accept_multiple_files=True, key="upload_files")
                 upload_submitted = st.form_submit_button("Check File(s) and Upload")
@@ -173,7 +178,6 @@ async def main():
                 else:
                     errors = 0
                     for file in upload_files:
-                        st.write(f"`{file.name}`")
                         check_res = check_finetune_dataset(file)
                         if check_res["format_errors"]:
                             error_msg = f"File `{file.name}` has the following errors:\n"
@@ -182,16 +186,31 @@ async def main():
                             st.error(error_msg)
                             errors += 1
                         else:
-                            st.caption("File is valid.")
+                            st.success(f"`{file.name}` is valid.")
                     if errors == 0:
                         with st.spinner("Uploading files..."):
                             for file in stqdm(upload_files):
                                 await openai_tool_op.upload_file(file)
-                        st.success("All files uploaded successfully.")
-                        if files_column.button("Refresh file list"):
-                            st.experimental_rerun()
+                        countdown = st.empty()
+                        for i in range(5, 0, -1):
+                            countdown.success(f"All files uploaded successfully. Refreshing file list in {i} seconds...")
+                            await asyncio.sleep(1)
+                        st.experimental_rerun()
                     else:
                         st.error(f"{errors} file(s) had errors. Please fix them and try again.")
+        
+            st.caption("Uploaded Files")
+            if len(files_res["data"]) == 0:
+                st.warning("No files found. Upload some data samples to enable model fine-tuning. For more info on how to prepare datasets, see: https://platform.openai.com/docs/guides/fine-tuning/preparing-your-dataset")
+            else:
+                files_df = pd.DataFrame(files_res["data"])
+                files_df = files_df[["created_at", "id", "filename", "bytes", "purpose"]].set_index("created_at")
+                files_df.index = pd.to_datetime(files_df.index, unit="s").rename("created at (UTC)")
+                st.dataframe(files_df)
+
+        with finetune_jobs_column:
+            pass
+
         if len(files_res["data"]) > 0:
             with st.form("file_operation_form", clear_on_submit=True):
                 file_id_col, epochs_col, action_col = st.columns([5, 2, 3])
@@ -218,7 +237,7 @@ async def main():
                     lines = contents_res.decode("utf-8").split("\n")
                     dataset = [json.loads(line) for line in lines]
                     st.write(f"`{file_id}`")
-                    st.caption("Contents")
+                    st.caption("File Contents (expand below area to view each training sample and their messages)")
                     st.json(dataset, expanded=False)
                     check_res = check_finetune_dataset(dataset)
                     if check_res["format_errors"]:
@@ -234,17 +253,17 @@ async def main():
                         )
                         st.info(
                             f"Review passed. Dataset includes ~{tokens_estimate['n_billing_tokens']} tokens. By default, you'll train for {tokens_estimate['n_epochs']} epochs on this dataset. "
-                            f"It amounts to ~{tokens_estimate['n_billing_tokens'] * tokens_estimate['n_epochs']} tokens in total. Check OpenAI pricing page to estimate total costs.",
+                            f"It amounts to ~{tokens_estimate['n_billing_tokens'] * tokens_estimate['n_epochs']} tokens in total. Check https://openai.com/pricing to estimate total costs.",
                             icon="✅"
                         )
                         with st.form("finetune-form", clear_on_submit=True):
                             st.caption("**Train a Finetuned Model**")
                             train_id_col, epochs_col2 = st.columns(2)
                             with train_id_col:
-                                st.text_input("Training File ID (Review another File ID to change)", value=file_id, disabled=True)
+                                st.text_input("Training File ID (review another File ID to change)", value=file_id, disabled=True)
                             with epochs_col2:
                                 epochs = st.number_input(
-                                    "Actual Epochs to Train",
+                                    "Actual Epochs to Train (1-25)",
                                     value=tokens_estimate["n_epochs"], min_value=1, max_value=25, step=1
                                 )
                             val_id_col, suffix_col = st.columns(2)
@@ -270,5 +289,14 @@ async def main():
                             st.json(delete_res)
                     else:
                         st.experimental_rerun()
+
+    with st.expander("**Model Playground**", expanded=False):
+        models_col, prompt_col = st.columns(2)
+        with models_col:
+            models_df = pd.DataFrame(models_res["data"])
+            models_df["created"] = pd.to_datetime(models_df["created"], unit="s")
+            models_df = models_df.set_index("created")
+            models_df.index.rename("created at (UTC)", inplace=True)
+            st.dataframe(models_df[["id", "owned_by", "root"]], use_container_width=True)
 
 asyncio.run(main())
