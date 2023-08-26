@@ -3,6 +3,7 @@ import json
 import openai
 import aiohttp
 import asyncio
+import inspect
 import argparse
 import tiktoken
 import pandas as pd
@@ -51,6 +52,7 @@ def check_finetune_dataset(data) -> dict:
 
     # Format error checks and warnings and statistics
     format_errors = defaultdict(int)
+    format_warnings = defaultdict(int)
 
     n_messages = []
     convo_lens = []
@@ -81,11 +83,11 @@ def check_finetune_dataset(data) -> dict:
                 format_errors["missing_content"] += 1
 
         if not any(message.get("role", None) == "system" for message in messages):
-            format_errors["warn_n_missing_system"] += 1
+            format_warnings["warn_n_missing_system"] += 1
         if not any(message.get("role", None) == "user" for message in messages):
-            format_errors["warn_n_missing_user"] += 1
+            format_warnings["warn_n_missing_user"] += 1
         if not any(message.get("role", None) == "assistant" for message in messages):
-            format_errors["warn_n_missing_assistant_message"] += 1
+            format_warnings["warn_n_missing_assistant_message"] += 1
         n_messages.append(len(messages))
         convo_lens.append(num_tokens_from_messages(messages))
         assistant_message_lens.append(num_assistant_tokens_from_messages(messages))
@@ -94,11 +96,15 @@ def check_finetune_dataset(data) -> dict:
     if n_too_long > 0:
         format_errors["n_too_long"] = n_too_long
 
+    if len(dataset) < 10:
+        format_errors["less_than_10_examples"] = True
+
     res = {
         "n_messages": n_messages,
         "convo_lens": convo_lens,
         "assistant_message_lens": assistant_message_lens,
         "format_errors": format_errors,
+        "format_warnings": format_warnings,
         "dataset": dataset,
     }
 
@@ -169,10 +175,9 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        res = await self.request(
+        return await self.request(
             openai_api_key, openai_org_id, "GET", path,
             headers=headers)
-        return res
     
     async def view_file_contents(self,
         openai_api_key: str,
@@ -183,10 +188,9 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        res = await self.request(
+        return await self.request(
             openai_api_key, openai_org_id, "GET", path,
             headers=headers)
-        return res
 
     async def delete_file(self,
         openai_api_key: str,
@@ -197,19 +201,21 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        res = await self.request(
+        return await self.request(
             openai_api_key, openai_org_id, "DELETE", path,
             headers=headers)
-        return res
     
     async def upload_file(self,
+        openai_api_key: str,
+        openai_org_id: str,
         file,
     ):
-        res = await openai.File.acreate(
+        openai.api_key = openai_api_key
+        openai.organization = openai_org_id
+        await openai.File.acreate(
             file=file.getvalue(),
             purpose="fine-tune",
             user_provided_filename=file.name)
-        return res
     
     async def get_finetune_jobs(self,
         openai_api_key: str,
@@ -219,10 +225,36 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        res = await self.request(
+        return await self.request(
             openai_api_key, openai_org_id, "GET", path,
             headers=headers)
-        return res
+    
+    async def create_finetune_job(self,
+        openai_api_key: str,
+        openai_org_id: str,
+        data: dict,
+    ):
+        path = "/fine_tuning/jobs"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai_api_key}",
+        }
+        return await self.request(
+            openai_api_key, openai_org_id, "POST", path,
+            headers=headers, data=data)
+        
+    async def cancel_finetune_job(self,
+        openai_api_key: str,
+        openai_org_id: str,
+        job_id: str,
+    ):
+        path = f"/fine_tuning/jobs/{job_id}/cancel"
+        headers = {
+            "Authorization": f"Bearer {openai_api_key}",
+        }
+        return await self.request(
+            openai_api_key, openai_org_id, "POST", path,
+            headers=headers)
     
     async def get_models(self,
         openai_api_key: str,
@@ -232,10 +264,9 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        res = await self.request(
+        return await self.request(
             openai_api_key, openai_org_id, "GET", path,
             headers=headers)
-        return res
     
     async def get_overall_usage(self,
         openai_api_key: str,
@@ -293,7 +324,7 @@ class OpenAITools:
         params: dict = {},
         headers: dict = {},
         data: aiohttp.FormData | dict | None = None,
-    ):
+    ) -> dict | bytes:
         headers.update({
             "authorization": f"Bearer {openai_api_key}",
             "openai-organization": openai_org_id,
@@ -304,19 +335,25 @@ class OpenAITools:
         logger.debug(f"Requesting {method} {uri} with params {params} and headers {headers}")
         if data:
             logger.debug(f"Request data: {data}")
-            if isinstance(data, dict):
-                # Convert dict into aiohttp FormData
-                data = aiohttp.FormData(data)
+        
         async with aiohttp.ClientSession() as session:
-            async with session.request(method, uri, params=params, headers=headers, data=data) as resp:
+            if isinstance(data, aiohttp.FormData):
+                sess_func = session.request(method, uri, params=params, headers=headers, data=data)
+            elif isinstance(data, dict):
+                sess_func = session.request(method, uri, params=params, headers=headers, json=data)
+            elif data is None:
+                sess_func = session.request(method, uri, params=params, headers=headers)
+            async with sess_func as resp:
                 if resp.status == 200:
                     content_type = resp.headers["Content-Type"]
                     if content_type == "application/json":
                         return await resp.json()
                     else:
                         return await resp.read()
+                elif resp.status == 400:
+                    return await resp.json()
                 else:
-                    raise Exception(f"Request failed with status {resp.status}")
+                    raise Exception(f"Request failed with status {resp.status}: {resp.reason}, {await resp.text()}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
