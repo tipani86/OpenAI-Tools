@@ -1,6 +1,7 @@
 import os
 import base64
 import asyncio
+import argparse
 import pandas as pd
 import streamlit as st
 from pathlib import Path
@@ -11,6 +12,12 @@ from datetime import datetime, timedelta
 UTC_TIMESTAMP = int(datetime.utcnow().timestamp())
 
 FILE_ROOT = Path(__file__).resolve().parent
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+args = parser.parse_args()
+
+DEBUG = args.debug
 
 @st.cache_data(show_spinner=False)
 def get_css() -> str:
@@ -58,8 +65,9 @@ with st.sidebar:
     st.text_input(label="openai_org_id", key="openai_org_id", placeholder="Your OpenAI Organization ID", label_visibility="collapsed")
     st.caption("_**Author's Note:** While I can only claim that your credentials are not stored anywhere, for maximum security, you should generate a new app-specific API key on your OpenAI account page and use it here. That way, you can deactivate that key after you don't plan to use this app anymore, and it won't affect any of your other apps._")
     st.markdown('<a href="https://github.com/tipani86/OpenAI-Tools"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/tipani86/OpenAI-Tools?style=social"></a>', unsafe_allow_html=True)
-    if st.button("Reload page"):
-        st.experimental_rerun()
+    if DEBUG:
+        if st.button("Reload page"):
+            st.experimental_rerun()
 
 # Gate the loading of the rest of the page if the user hasn't entered their credentials
 openai_api_key = st.session_state.get("openai_api_key", "")
@@ -133,6 +141,9 @@ async def main():
                 f'<a href="data:file/csv;base64,{df_to_csv(usage_df)}" download="usage_{start_date}_{end_date}.csv">Download usage data as CSV</a>',
                 unsafe_allow_html=True
             )
+
+    if not DEBUG:
+        st.stop()
 
     with st.expander("**Model Fine-Tuning**", expanded=False):
         upload_column, files_column = st.columns(2)
