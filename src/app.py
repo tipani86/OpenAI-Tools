@@ -52,8 +52,12 @@ st.set_page_config(
     layout="wide"
 )
 
-st.session_state["openai_api_key"] = os.getenv("OPENAI_API_KEY", "")
-st.session_state["openai_org_id"] = os.getenv("OPENAI_ORGANIZATION", "")
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
+openai_org_id = os.getenv("OPENAI_ORGANIZATION", "")
+if len(openai_api_key) > 0:
+    st.session_state["openai_api_key"] = openai_api_key
+if len(openai_org_id) > 0:
+    st.session_state["openai_org_id"] = openai_org_id
 
 # Load CSS code
 st.markdown(get_css(), unsafe_allow_html=True)
