@@ -170,7 +170,7 @@ async def main():
                 st.stop()
             with st.spinner("Loading usage data (this may take a while)..."):
                 usage_res = await openai_tool_op.get_usage(openai_api_key, openai_org_id, user_selector, [start_date, end_date])
-            if isinstance(cancel_res, dict) and "error" in usage_res:
+            if isinstance(usage_res, dict) and "error" in usage_res:
                 st.error(f"{usage_res['error']['message']}")
             else:
                 usage_df = pd.DataFrame(usage_res["data"])
