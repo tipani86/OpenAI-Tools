@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 TIMEOUT = 60
-N_RETRIES = 1
+N_RETRIES = 3
 BACKOFF = 5
 MULTIPLIER = 1.5
 
