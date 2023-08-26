@@ -143,6 +143,8 @@ async def main():
         finetune_jobs_res = st.session_state["DATA"]["finetune_jobs"]
         models_res = st.session_state["DATA"]["models"]
 
+    st.subheader("OpenAI Tools")
+
     with st.expander("**My Organization's Users**", expanded=True):
         users_df = pd.DataFrame(users_res["data"])
         users_df["created"] = pd.to_datetime(users_df["created"], unit="s")
