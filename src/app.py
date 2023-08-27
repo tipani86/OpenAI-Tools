@@ -277,103 +277,99 @@ async def main():
                 files_df.index = pd.to_datetime(files_df.index, unit="s").rename("created at (UTC)")
                 st.dataframe(files_df.sort_index(), use_container_width=True)
 
-        if len(files_res["data"]) > 0:
-            with st.form("file_operation_form", clear_on_submit=True):
-                file_id_col, epochs_col, action_col = st.columns([5, 2, 3])
-                with file_id_col:
-                    file_id = st.text_input("File ID", placeholder="Paste file ID from above list")
-                with epochs_col:
-                    epochs = st.text_input("Target Epochs", value=3)
-                with action_col:
-                    action = st.selectbox(
-                        label="Action",
-                        options=("review", "delete"),
-                        format_func=get_action_names,
-                    )
-                file_op_submitted = st.form_submit_button("Submit")
+            if len(files_res["data"]) > 0:
+                with st.form("file_operation_form", clear_on_submit=True):
+                    file_id_col, action_col = st.columns([2, 1])
+                    with file_id_col:
+                        file_id = st.text_input("File ID", placeholder="Paste file ID from above list")
+                    with action_col:
+                        action = st.selectbox(
+                            label="Action",
+                            options=("review", "delete"),
+                            format_func=get_action_names,
+                        )
+                    file_op_submitted = st.form_submit_button("Submit")
             
-            if file_op_submitted:
-                st.session_state["file_id"] = file_id
-                if len(file_id) == 0:
-                    st.error("Please enter a valid File ID.")
-                elif st.session_state["file_id"] not in files_df.id.tolist():
+        if file_op_submitted:
+            st.session_state["file_id"] = file_id
+            if len(file_id) == 0:
+                st.error("Please enter a valid File ID.")
+            elif st.session_state["file_id"] not in files_df.id.tolist():
+                st.error(f"File ID `{st.session_state['file_id']}` not found.")
+                if "tokens_estimate" in st.session_state:
+                    del st.session_state["tokens_estimate"]
+            elif action == "review":
+                contents_res = await view_file_contents(st.session_state["file_id"])
+                if contents_res is None:
                     st.error(f"File ID `{st.session_state['file_id']}` not found.")
                     if "tokens_estimate" in st.session_state:
                         del st.session_state["tokens_estimate"]
-                elif not is_num(epochs) or int(epochs) < 1 or int(epochs) > 25:
-                    st.error(f"Invalid value {epochs} for `epochs` (1 <= `epochs` <= 25)")
-                elif action == "review":
-                    epochs = int(epochs)
-                    contents_res = await view_file_contents(st.session_state["file_id"])
-                    if contents_res is None:
-                        st.error(f"File ID `{st.session_state['file_id']}` not found.")
-                        if "tokens_estimate" in st.session_state:
-                            del st.session_state["tokens_estimate"]
-                    elif isinstance(contents_res, dict) and "error" in contents_res:
-                        st.error(f"{contents_res['error']['message']}")
-                    else:
+                elif isinstance(contents_res, dict) and "error" in contents_res:
+                    st.error(f"{contents_res['error']['message']}")
+                else:
 
-                        # Parse data
-                        try:
-                            lines = contents_res.decode("utf-8").split("\n")
-                            dataset = [json.loads(line) for line in lines]
-                            data_type = "JSONL"
-                        except:
-                            # Not a valid JSONL file, try CSV instead
-                            csv_df = pd.read_csv(StringIO(contents_res.decode("utf-8")), index_col=0)
-                            data_type = "CSV"
-    
-                        st.write(f"`{st.session_state['file_id']}`")
-                        if data_type == "CSV":
-                            data_col, chart_col = st.columns(2)
-                            with data_col:
-                                st.dataframe(csv_df.sort_index(), use_container_width=True)
-                            with chart_col:
-                                loss_cols = [col for col in csv_df.columns if "loss" in col]
-                                if len(loss_cols) > 0:
-                                    st.caption("Loss Curves")
-                                    st.line_chart(csv_df[loss_cols])
-                                
-                                accuracy_cols = [col for col in csv_df.columns if "accuracy" in col]
-                                if len(accuracy_cols) > 0:
-                                    st.caption("Accuracy Curves")
-                                    st.line_chart(csv_df[accuracy_cols])
-                        else:
-                            # JSONL data type
-                            st.caption("File Contents (expand below area to view each training sample and their messages)")
-                            st.json(dataset, expanded=False)
-                            check_res = check_finetune_dataset(dataset)
-                            if check_res["format_errors"]:
-                                error_msg = f"File ID `{st.session_state['file_id']}` has the following errors:\n"
-                                for error in check_res["format_errors"]:
-                                    error_msg += f"- {error}: {check_res['format_errors'][error]}\n"
-                                st.error(error_msg)
-                                if "tokens_estimate" in st.session_state:
-                                    del st.session_state["tokens_estimate"]
-                            else:
-                                st.session_state["tokens_estimate"] = estimate_training_tokens(
-                                    dataset = check_res["dataset"],
-                                    convo_lens = check_res["convo_lens"],
-                                    epochs=epochs
-                                )
-                            if check_res["format_warnings"]:
-                                warning_msg = f"File ID `{st.session_state['file_id']}` has the following warnings:\n"
-                                for warning in check_res["format_warnings"]:
-                                    warning_msg += f"- {warning}: {check_res['format_warnings'][warning]}\n"
-                                st.warning(warning_msg)
-                elif action == "delete":
-                    delete_res = await delete_file(file_id)
-                    if isinstance(delete_res, dict) and "error" in delete_res:
-                        st.error(f"{delete_res['error']['message']}")
-                    elif delete_res is None:
-                        st.error(f"File {file_id} deletion failed")
-                    elif "deleted" in delete_res and not delete_res["deleted"]:
-                        st.json(delete_res)
-                    else:
+                    # Parse data
+                    try:
+                        lines = contents_res.decode("utf-8").split("\n")
+                        dataset = [json.loads(line) for line in lines]
+                        data_type = "JSONL"
+                    except:
+                        # Not a valid JSONL file, try CSV instead
+                        csv_df = pd.read_csv(StringIO(contents_res.decode("utf-8")), index_col=0)
+                        data_type = "CSV"
+
+                    st.write(f"`{st.session_state['file_id']}`")
+                    if data_type == "CSV":
                         if "tokens_estimate" in st.session_state:
                             del st.session_state["tokens_estimate"]
-                        st.session_state["NEED_REFRESH"] = True
-                        st.experimental_rerun()
+                        data_col, chart_col = st.columns(2)
+                        with data_col:
+                            st.dataframe(csv_df.sort_index(), use_container_width=True, height=600)
+                        with chart_col:
+                            loss_cols = [col for col in csv_df.columns if "loss" in col]
+                            if len(loss_cols) > 0:
+                                st.caption("Loss Curves")
+                                st.line_chart(csv_df[loss_cols], height=250)
+                            
+                            accuracy_cols = [col for col in csv_df.columns if "accuracy" in col]
+                            if len(accuracy_cols) > 0:
+                                st.caption("Accuracy Curves")
+                                st.line_chart(csv_df[accuracy_cols], height=250)
+                    else:
+                        # JSONL data type
+                        st.caption("File Contents (expand below area to view each training sample and their messages)")
+                        st.json(dataset, expanded=False)
+                        check_res = check_finetune_dataset(dataset)
+                        if check_res["format_errors"]:
+                            error_msg = f"File ID `{st.session_state['file_id']}` has the following errors:\n"
+                            for error in check_res["format_errors"]:
+                                error_msg += f"- {error}: {check_res['format_errors'][error]}\n"
+                            st.error(error_msg)
+                            if "tokens_estimate" in st.session_state:
+                                del st.session_state["tokens_estimate"]
+                        else:
+                            st.session_state["tokens_estimate"] = estimate_training_tokens(
+                                dataset = check_res["dataset"],
+                                convo_lens = check_res["convo_lens"],
+                            )
+                        if check_res["format_warnings"]:
+                            warning_msg = f"File ID `{st.session_state['file_id']}` has the following warnings:\n"
+                            for warning in check_res["format_warnings"]:
+                                warning_msg += f"- {warning}: {check_res['format_warnings'][warning]}\n"
+                            st.warning(warning_msg)
+            elif action == "delete":
+                delete_res = await delete_file(file_id)
+                if isinstance(delete_res, dict) and "error" in delete_res:
+                    st.error(f"{delete_res['error']['message']}")
+                elif delete_res is None:
+                    st.error(f"File {file_id} deletion failed")
+                elif "deleted" in delete_res and not delete_res["deleted"]:
+                    st.json(delete_res)
+                else:
+                    if "tokens_estimate" in st.session_state:
+                        del st.session_state["tokens_estimate"]
+                    st.session_state["NEED_REFRESH"] = True
+                    st.experimental_rerun()
 
             if "tokens_estimate" in st.session_state and len(st.session_state["tokens_estimate"]) > 0:
                 tokens_estimate = st.session_state["tokens_estimate"]
@@ -389,7 +385,7 @@ async def main():
                         st.text_input("Training File ID (review another File ID to change)", value=st.session_state["file_id"], disabled=True)
                     with epochs_col2:
                         epochs = st.number_input(
-                            "Actual Epochs to Train (1-25)",
+                            "Epochs to Train (1-25)",
                             value=tokens_estimate["n_epochs"], min_value=1, max_value=25, step=1
                         )
                     val_id_col, suffix_col = st.columns(2)
