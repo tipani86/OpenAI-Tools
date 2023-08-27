@@ -21,8 +21,8 @@ Or check out the tutorial video below:
 ![tokens](https://github.com/tipani86/OpenAI-Tools/assets/60060750/e871ba47-6ff0-4ac2-8169-5a9a0ee53d37)
 
 ### Manage Finetuning Datasets, Jobs and Metrics
-![finetuning_1](https://github.com/tipani86/OpenAI-Tools/assets/60060750/32418424-98c2-4039-9860-5c66477341e2)
-![finetuning_2](https://github.com/tipani86/OpenAI-Tools/assets/60060750/1385efc6-49ce-43b9-b1b9-653d90c7675c)
+![finetuning_1](https://github.com/tipani86/OpenAI-Tools/assets/60060750/4eafdc5f-e702-413b-8e97-68cc7420ff4b)
+![finetuning_2](https://github.com/tipani86/OpenAI-Tools/assets/60060750/21f706ba-06ef-4f5b-9fc1-bfa29dda0f1a)
 
 ### Test-Ride Models
 ![playground](https://github.com/tipani86/OpenAI-Tools/assets/60060750/a8998700-255d-4b3e-9017-c41eec07ed55)
