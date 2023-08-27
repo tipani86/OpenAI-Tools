@@ -3,6 +3,8 @@ Toolkit to get the most out of your OpenAI Account.
 
 Visit the app at [https://www.openaitools.io](https://www.openaitools.io)
 
+Check out the tutorial video: https://www.youtube.com/watch?v=ZFMahUWQin4
+
 ## Features
 - Track your API tokens usage
 - Upload, verify and manage your ChatGPT custom finetuning datasets
