@@ -1,4 +1,4 @@
-# OpenAI-Tools
+# OpenAI Tools
 Toolkit to get the most out of your OpenAI Account.
 
 Visit the app at [https://www.openaitools.io](https://www.openaitools.io)
