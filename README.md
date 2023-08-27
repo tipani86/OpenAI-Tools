@@ -3,7 +3,9 @@ Toolkit to get the most out of your OpenAI Account.
 
 Visit the app at [https://www.openaitools.io](https://www.openaitools.io)
 
-Check out the tutorial video: https://www.youtube.com/watch?v=ZFMahUWQin4
+Or check out the tutorial video below:
+
+[![](https://markdown-videos-api.jorgenkh.no/youtube/ZFMahUWQin4)](https://youtu.be/ZFMahUWQin4)
 
 ## Features
 - Track your API tokens usage
