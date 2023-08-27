@@ -155,6 +155,8 @@ class OpenAITools:
     ) -> dict:
         path = f"/organizations/{openai_org_id}/users"
         res = await self.request(openai_api_key, openai_org_id, "GET", path)
+        if isinstance(res, dict) and "error" in res:
+            return res
         # Users data are under the "members" object, plus we also need
         # to flatten the "user" object inside each member
         output = []
@@ -350,7 +352,7 @@ class OpenAITools:
                         return await resp.json()
                     else:
                         return await resp.read()
-                elif resp.status == 400:
+                elif resp.status in [400, 401, 403, 404, 429, 500, 503]:
                     return await resp.json()
                 else:
                     raise Exception(f"Request failed with status {resp.status}: {resp.reason}, {await resp.text()}")

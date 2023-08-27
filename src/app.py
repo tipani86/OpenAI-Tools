@@ -130,6 +130,12 @@ async def main():
             users_res, files_res, finetune_jobs_res, models_res = await asyncio.gather(
                 get_users(), get_files(), get_finetune_jobs(), get_models()
             )
+            # Go through the results to see if there were any errors
+            for res in [users_res, files_res, finetune_jobs_res, models_res]:
+                print(res)
+                if isinstance(res, dict) and "error" in res:
+                    st.error(f"{res['error']['message']}")
+                    st.stop()
             st.session_state["DATA"] = {
                 "users": users_res,
                 "files": files_res,
