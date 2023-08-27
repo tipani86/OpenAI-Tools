@@ -1,5 +1,5 @@
 # OpenAI Tools
-Toolkit to get the most out of your OpenAI Account.
+Toolkit to get the most out of your OpenAI account.
 
 Visit the app at [https://www.openaitools.io](https://www.openaitools.io)
 
@@ -20,7 +20,7 @@ Or check out the tutorial video below:
 ### Track Token Usage
 ![tokens](https://github.com/tipani86/OpenAI-Tools/assets/60060750/e871ba47-6ff0-4ac2-8169-5a9a0ee53d37)
 
-### Manage Finetuning Datasets, Jobs and Stats
+### Manage Finetuning Datasets, Jobs and Metrics
 ![finetuning_1](https://github.com/tipani86/OpenAI-Tools/assets/60060750/32418424-98c2-4039-9860-5c66477341e2)
 ![finetuning_2](https://github.com/tipani86/OpenAI-Tools/assets/60060750/1385efc6-49ce-43b9-b1b9-653d90c7675c)
 
