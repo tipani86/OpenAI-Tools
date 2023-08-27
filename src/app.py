@@ -132,7 +132,6 @@ async def main():
             )
             # Go through the results to see if there were any errors
             for res in [users_res, files_res, finetune_jobs_res, models_res]:
-                print(res)
                 if isinstance(res, dict) and "error" in res:
                     st.error(f"{res['error']['message']}")
                     st.stop()
