@@ -198,13 +198,13 @@ async def main():
                     unsafe_allow_html=True
                 )
 
-    with st.expander("**Model Fine-Tuning**", expanded=True):
+    with st.expander("**Model Fine-tuning**", expanded=True):
         files_column, finetune_jobs_column = st.columns(2)
 
         with finetune_jobs_column:
-            st.caption("Finetuning Jobs")
+            st.caption("Fine-tuning Jobs")
             if len(finetune_jobs_res["data"]) == 0:
-                st.info("No finetuning jobs found. Start a new job by uploading/reviewing a dataset file below.")
+                st.info("No fine-tuning jobs found. Start a new job by uploading/reviewing a dataset file below.")
             else:
                 finetune_jobs_df = pd.DataFrame(finetune_jobs_res["data"])
                 finetune_jobs_df["created_at"] = pd.to_datetime(finetune_jobs_df["created_at"], unit="s")
@@ -384,7 +384,7 @@ async def main():
                     icon="✅"
                 )
                 with st.form("finetune-form", clear_on_submit=True):
-                    st.caption("**Train a Finetuned Model**")
+                    st.caption("**Train a Fine-tuned Model**")
                     train_id_col, epochs_col2 = st.columns(2)
                     with train_id_col:
                         st.text_input("Training File ID (review another File ID to change)", value=st.session_state["file_id"], disabled=True)
@@ -406,7 +406,7 @@ async def main():
                             max_chars=40,
                             help='A string of up to 40 characters that will be added to your fine-tuned model name. For example, "custom-model-name" would produce a model name like `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.'
                         )
-                    finetune_submitted = st.form_submit_button("Start Finetuning Job")
+                    finetune_submitted = st.form_submit_button("Start Fine-tuning Job")
                 if finetune_submitted:
                     data = {
                         "training_file": st.session_state["file_id"],
@@ -425,7 +425,7 @@ async def main():
                     else:
                         finetune_countdown = st.empty()
                         for i in range(5, 0, -1):
-                            finetune_countdown.success(f"Finetune job submission successful. Refreshing finetuning list in {i} seconds...")
+                            finetune_countdown.success(f"Fine-tuning job submission successful. Refreshing fine-tuning list in {i} seconds...")
                             await asyncio.sleep(1)
                         if "tokens_estimate" in st.session_state:
                             del st.session_state["tokens_estimate"]

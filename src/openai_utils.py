@@ -333,7 +333,7 @@ class OpenAITools:
             "method": method,
         })
         uri = f"{self.openai_api_endpoint}{path}"
-        logger.debug(f"Requesting {method} {uri} with params {params} and headers {headers}")
+        logger.debug(f"Requesting {method} {uri} with params {params}")
         if data:
             logger.debug(f"Request data: {data}")
         
