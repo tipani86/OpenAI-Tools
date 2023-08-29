@@ -156,6 +156,8 @@ class OpenAITools:
         res = await self.request(openai_api_key, openai_org_id, "GET", path)
         if isinstance(res, dict) and "error" in res:
             return res
+        if res is None:
+            return {"error": {"message": "Data loading timeout. Possible connection error?"}}
         # Users data are under the "members" object, plus we also need
         # to flatten the "user" object inside each member
         output = []

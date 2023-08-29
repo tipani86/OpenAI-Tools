@@ -182,21 +182,24 @@ async def main():
                 st.error(f"{usage_res['error']['message']}")
             else:
                 usage_df = pd.DataFrame(usage_res["data"])
-                # Convert "aggregation_timestamp" column to datetime that rounds to a single day only
-                usage_df["date"] = pd.to_datetime(usage_df["aggregation_timestamp"], unit="s").dt.date
-                # Rename column "snapshot_id" as "model"
-                usage_df.rename(columns={"snapshot_id": "model"}, inplace=True)
-                # Group by aggregation_timestamp and snapshot_id
-                groups = usage_df.groupby(["date", "model"]).sum(numeric_only=True)
-                # Clean up for display
-                usage_df = groups.reset_index()
-                usage_df = usage_df[["date", "model", "n_requests", "n_context_tokens_total", "n_generated_tokens_total"]].set_index("date", inplace=False)
-                st.dataframe(usage_df.sort_index())
-                # Allow user to download usage data as CSV
-                st.markdown(
-                    f'<a href="data:file/csv;base64,{df_to_csv(usage_df)}" download="usage_{start_date}_{end_date}.csv">Download usage data as CSV</a>',
-                    unsafe_allow_html=True
-                )
+                if len(usage_df) == 0:
+                    st.warning("No usage data found for the selected user and date range.")
+                else:
+                    # Convert "aggregation_timestamp" column to datetime that rounds to a single day only
+                    usage_df["date"] = pd.to_datetime(usage_df["aggregation_timestamp"], unit="s").dt.date
+                    # Rename column "snapshot_id" as "model"
+                    usage_df.rename(columns={"snapshot_id": "model"}, inplace=True)
+                    # Group by aggregation_timestamp and snapshot_id
+                    groups = usage_df.groupby(["date", "model"]).sum(numeric_only=True)
+                    # Clean up for display
+                    usage_df = groups.reset_index()
+                    usage_df = usage_df[["date", "model", "n_requests", "n_context_tokens_total", "n_generated_tokens_total"]].set_index("date", inplace=False)
+                    st.dataframe(usage_df.sort_index())
+                    # Allow user to download usage data as CSV
+                    st.markdown(
+                        f'<a href="data:file/csv;base64,{df_to_csv(usage_df)}" download="usage_{start_date}_{end_date}.csv">Download usage data as CSV</a>',
+                        unsafe_allow_html=True
+                    )
 
     with st.expander("**Model Fine-tuning**", expanded=True):
         files_column, finetune_jobs_column = st.columns(2)
