@@ -76,6 +76,9 @@ with st.sidebar:
     st.text_input(label="openai_org_id", key="openai_org_id", placeholder="Your OpenAI Organization ID", type="password", label_visibility="collapsed")
     st.caption("_**Author's Note:** While I can only claim that your credentials are not stored anywhere, for maximum security, you should generate a new app-specific API key on your OpenAI account page and use it here. That way, you can deactivate that key after you don't plan to use this app anymore, and it won't affect any of your other apps. You can check out the GitHub source for this app using below button:_")
     st.markdown('<a href="https://github.com/tipani86/OpenAI-Tools"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/tipani86/OpenAI-Tools?style=social"></a><br><small>Page views: <img src="https://www.cutercounter.com/hits.php?id=hxncoqd&nd=4&style=1" border="0" alt="visitor counter"></small>', unsafe_allow_html=True)
+    st.subheader("Tutorial Video")
+    with st.expander("YouTube", expanded=False):
+        st.video("https://youtu.be/ZFMahUWQin4")
     if DEBUG:
         if st.button("Reload page"):
             st.experimental_rerun()
