@@ -174,32 +174,68 @@ async def main():
             # Check that end date is not before start date
             if end_date < start_date:
                 st.error("End date cannot be before start date.")
-                st.stop()
-            with st.spinner("Loading usage data (this may take a while)..."):
-                usage_res = await openai_tool_op.get_usage(openai_api_key, openai_org_id, user_selector, [start_date, end_date])
-            st.balloons()
-            if isinstance(usage_res, dict) and "error" in usage_res:
-                st.error(f"{usage_res['error']['message']}")
             else:
-                usage_df = pd.DataFrame(usage_res["data"])
-                if len(usage_df) == 0:
-                    st.warning("No usage data found for the selected user and date range.")
-                else:
-                    # Convert "aggregation_timestamp" column to datetime that rounds to a single day only
-                    usage_df["date"] = pd.to_datetime(usage_df["aggregation_timestamp"], unit="s").dt.date
-                    # Rename column "snapshot_id" as "model"
-                    usage_df.rename(columns={"snapshot_id": "model"}, inplace=True)
-                    # Group by aggregation_timestamp and snapshot_id
-                    groups = usage_df.groupby(["date", "model"]).sum(numeric_only=True)
-                    # Clean up for display
-                    usage_df = groups.reset_index()
-                    usage_df = usage_df[["date", "model", "n_requests", "n_context_tokens_total", "n_generated_tokens_total"]].set_index("date", inplace=False)
-                    st.dataframe(usage_df.sort_index())
-                    # Allow user to download usage data as CSV
-                    st.markdown(
-                        f'<a href="data:file/csv;base64,{df_to_csv(usage_df)}" download="usage_{start_date}_{end_date}.csv">Download usage data as CSV</a>',
-                        unsafe_allow_html=True
-                    )
+                with st.spinner("Querying usage data (this may take a while)..."):
+                    user_ft_res = await openai_tool_op.get_finetune_jobs(openai_api_key, openai_org_id, user_selector)
+                    usage_res = await openai_tool_op.get_usage(openai_api_key, openai_org_id, user_selector, [start_date, end_date])
+                st.balloons()
+                usage_errors = False
+                for res in [user_ft_res, usage_res]:
+                    if isinstance(res, dict) and "error" in res:
+                        st.error(f"{res['error']['message']}")
+                        usage_errors = True
+                if not usage_errors:
+                    user_ft_df = pd.DataFrame(user_ft_res["data"])
+                    usage_df = pd.DataFrame(usage_res["data"])
+                    if len(usage_df) > 0:
+                        # Convert "aggregation_timestamp" column to datetime that rounds to a single day only
+                        usage_df["date"] = pd.to_datetime(usage_df["aggregation_timestamp"], unit="s").dt.date
+                        # Rename column "snapshot_id" as "model"
+                        usage_df.rename(columns={"snapshot_id": "model"}, inplace=True)
+                        # Group by date and model
+                        groups = usage_df.groupby(["date", "model"]).sum(numeric_only=True)
+                        # Clean up for display
+                        usage_df = groups.reset_index()
+                        usage_df = usage_df[["date", "model", "n_requests", "n_context_tokens_total", "n_generated_tokens_total"]].set_index("date", inplace=False)
+                    else:
+                        # Create an empty dataframe with the same columns as the final usage_df
+                        usage_df = pd.DataFrame(columns=["model", "n_requests", "n_context_tokens_total", "n_generated_tokens_total"])
+
+                    # Merge finetuning tokens to main usage_df, if exist
+                    if len(user_ft_df) > 0:
+                        # Convert "aggregation_timestamp" column to datetime that rounds to a single day only, then make it the index
+                        user_ft_df["date"] = pd.to_datetime(user_ft_df["created_at"], unit="s").dt.date
+                        # First, filter only rows where trained_tokens is not null
+                        user_ft_df = user_ft_df.dropna(subset=["trained_tokens"])
+                        # Second, filter only rows where date is between start_date and end_date (inclusive)
+                        user_ft_df = user_ft_df[(user_ft_df["date"] >= datetime.strptime(start_date, "%Y-%m-%d").date()) & (user_ft_df["date"] <= datetime.strptime(end_date, "%Y-%m-%d").date())]
+                        if len(user_ft_df) > 0:
+                            # Rename trained_tokens as n_context_tokens_total
+                            user_ft_df.rename(columns={"trained_tokens": "n_context_tokens_total"}, inplace=True)
+                            # Add a column n_requests with the value of 1 always
+                            user_ft_df["n_requests"] = 1
+                            # Rename all values in the model column as "ft-job:{name}"
+                            user_ft_df["model"] = user_ft_df["model"].apply(lambda x: f"ft-job:{x}")
+
+                            user_ft_df = user_ft_df.set_index("date", inplace=False)
+                            # Group by date and model
+                            groups = user_ft_df.groupby(["date", "model"]).sum(numeric_only=True)
+                            # Clean up for display
+                            user_ft_df = groups.reset_index().set_index("date", inplace=False)
+                            # Concatenate with usage_df on index and only with columns model, n_requests, n_context_tokens_total
+                            usage_df = pd.concat([usage_df, user_ft_df[["model", "n_requests", "n_context_tokens_total"]]], axis=0)
+                            # Fill NaN values with 0 and sort index
+                            usage_df = usage_df.fillna(0).sort_index()
+
+                    if len(usage_df) == 0:
+                        st.warning("No usage data found for the selected date range.")
+                    else:
+                        st.dataframe(usage_df.sort_index())
+                        # Allow user to download usage data as CSV
+                        st.markdown(
+                            f'<a href="data:file/csv;base64,{df_to_csv(usage_df)}" download="usage_{start_date}_{end_date}.csv">Download usage data as CSV</a>',
+                            unsafe_allow_html=True
+                        )
 
     with st.expander("**Model Fine-tuning**", expanded=True):
         files_column, finetune_jobs_column = st.columns(2)

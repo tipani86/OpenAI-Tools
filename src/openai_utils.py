@@ -223,14 +223,20 @@ class OpenAITools:
     async def get_finetune_jobs(self,
         openai_api_key: str,
         openai_org_id: str,
+        user_id: str | None = None,
     ) -> dict:
         path = "/fine_tuning/jobs"
+        params = {}
+        if user_id is not None:
+            params = {
+                "user_id": user_id,
+            }
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
         return await self.request(
             openai_api_key, openai_org_id, "GET", path,
-            headers=headers)
+            headers=headers, params=params)
     
     async def create_finetune_job(self,
         openai_api_key: str,
