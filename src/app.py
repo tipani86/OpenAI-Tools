@@ -80,7 +80,7 @@ with st.sidebar:
     with st.expander("On YouTube", expanded=False):
         st.video("https://youtu.be/ZFMahUWQin4")
     with st.expander("On WeChat Channel", expanded=False):
-        st.image(get_local_img(FILE_ROOT / "wechat_channel_video.png"), use_column_width=True)
+        st.image(FILE_ROOT / "wechat_channel_video.png", use_column_width=True)
     if DEBUG:
         if st.button("Reload page"):
             st.experimental_rerun()
