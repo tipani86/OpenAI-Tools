@@ -523,81 +523,102 @@ async def main():
         if prompt_submitted:
             if len(prompt) == 0:
                 models_col.error("Message cannot be empty.")
-                st.stop()
-            status_container.empty()
-            if "HISTORY" not in st.session_state:
-                st.session_state["HISTORY"] = []
-                if len(system_prompt) > 0:
-                    st.session_state["HISTORY"].append({
-                        "role": "system",
-                        "content": system_prompt
-                    })
-                st.session_state["HISTORY"].append({
-                    "role": "user",
-                    "content": prompt
-                })
             else:
-                if len(system_prompt) > 0:
-                    if st.session_state["HISTORY"][0]["role"] != "system":
-                        # There was no system prompt before but now we need to add it on the 0th index
-                        st.session_state["HISTORY"].insert(0, {
+                status_container.empty()
+                if "HISTORY" not in st.session_state:
+                    st.session_state["HISTORY"] = []
+                    if len(system_prompt) > 0:
+                        st.session_state["HISTORY"].append({
                             "role": "system",
                             "content": system_prompt
                         })
-                    else:
-                        # Just replace the current system prompt
-                        st.session_state["HISTORY"][0]["content"] = system_prompt
-                elif len(system_prompt) == 0:
-                    if st.session_state["HISTORY"][0]["role"] == "system":
-                        # There was a system prompt before but now we need to remove it
-                        del st.session_state["HISTORY"][0]
-                st.session_state["HISTORY"].append({
-                    "role": "user",
-                    "content": prompt
-                })
-            if st.session_state["HISTORY"][0]["role"] == "system":
-                status_container.write(f"**System Prompt:** {st.session_state['HISTORY'][0]['content']}")
-            with chat_container:
-                # Render the latest human message
-                with st.chat_message("user"):
-                    st.markdown(prompt)
-                # Render the bot reply
-                reply_box = st.empty()
-                with reply_box:
-                    with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
-                        loading_fn = FILE_ROOT / "loading.gif"
-                        st.markdown(f"<img src='data:image/gif;base64,{get_local_img(loading_fn)}' width=30 height=10>", unsafe_allow_html=True)
+                    st.session_state["HISTORY"].append({
+                        "role": "user",
+                        "content": prompt
+                    })
+                else:
+                    if len(system_prompt) > 0:
+                        if st.session_state["HISTORY"][0]["role"] != "system":
+                            # There was no system prompt before but now we need to add it on the 0th index
+                            st.session_state["HISTORY"].insert(0, {
+                                "role": "system",
+                                "content": system_prompt
+                            })
+                        else:
+                            # Just replace the current system prompt
+                            st.session_state["HISTORY"][0]["content"] = system_prompt
+                    elif len(system_prompt) == 0:
+                        if st.session_state["HISTORY"][0]["role"] == "system":
+                            # There was a system prompt before but now we need to remove it
+                            del st.session_state["HISTORY"][0]
+                    st.session_state["HISTORY"].append({
+                        "role": "user",
+                        "content": prompt
+                    })
+                if st.session_state["HISTORY"][0]["role"] == "system":
+                    status_container.write(f"**System Prompt:** {st.session_state['HISTORY'][0]['content']}")
+                with chat_container:
+                    # Render the latest human message
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
+                    # Render the bot reply
+                    reply_box = st.empty()
+                    with reply_box:
+                        with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
+                            loading_fn = FILE_ROOT / "loading.gif"
+                            st.markdown(f"<img src='data:image/gif;base64,{get_local_img(loading_fn)}' width=30 height=10>", unsafe_allow_html=True)
 
-                # Call the OpenAI API for final result
-                reply_text = ""
-                async for chunk in await openai.ChatCompletion.acreate(
-                    model=model_id,
-                    messages=st.session_state["HISTORY"],
-                    stream=True,
-                    timeout=TIMEOUT,
-                ):
-                    content = chunk["choices"][0].get("delta", {}).get("content", None)
-                    if content is not None:
-                        reply_text += content
+                    # Call the OpenAI API for final result
+                    reply_text = ""
+                    async for chunk in await openai.ChatCompletion.acreate(
+                        model=model_id,
+                        messages=st.session_state["HISTORY"],
+                        stream=True,
+                        timeout=TIMEOUT,
+                    ):
+                        content = chunk["choices"][0].get("delta", {}).get("content", None)
+                        if content is not None:
+                            reply_text += content
 
-                        # Continuously render the reply as it comes in
-                        with reply_box:
-                            with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
-                                st.markdown(reply_text)
+                            # Continuously render the reply as it comes in
+                            with reply_box:
+                                with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
+                                    st.markdown(reply_text)
 
-                # Final fixing
-                reply_text = reply_text.strip()
+                    # Final fixing
+                    reply_text = reply_text.strip()
 
-                with reply_box:
-                    with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
-                        st.markdown(reply_text)
+                    with reply_box:
+                        with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
+                            st.markdown(reply_text)
 
-                # Append the final reply to the chat history
-                st.session_state["HISTORY"].append({
-                    "role": "assistant",
-                    "content": reply_text
-                })
+                    # Append the final reply to the chat history
+                    st.session_state["HISTORY"].append({
+                        "role": "assistant",
+                        "content": reply_text
+                    })
 
-                st.experimental_rerun()
+                    st.experimental_rerun()
+    
+    with st.expander("**Whisper Playground**", expanded=True):
+        # The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
+        whisper_file = st.file_uploader("Upload an audio file (Note: There's a 25 MB limit by OpenAI)", type=["flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"])
+        # Check that the file size doesn't exceed 25MB which is OpenAI's limit
+        if whisper_file is not None:
+            file_size = len(whisper_file.getvalue())
+            if file_size > 25 * 1024 * 1024:
+                st.error(f"File size exceeds 25MB limit. Please upload a smaller file.")
+            else:
+                whisper_submitted = st.button("Transcribe")
+                if whisper_submitted:
+                    with st.spinner("Transcribing..."):
+                        # Call the OpenAI API
+                        transcript = await openai.Audio.atranscribe(
+                            model="whisper-1",  # Only this one available for now
+                            file=whisper_file,
+                            timeout=TIMEOUT,
+                        )
+                    st.caption("Transcription complete.")
+                    st.text_area("Transcript", transcript["text"] if "text" in transcript else transcript, height=200)
             
 asyncio.run(main())
