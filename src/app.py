@@ -154,7 +154,8 @@ async def main():
         finetune_jobs_res = st.session_state["DATA"]["finetune_jobs"]
         models_res = st.session_state["DATA"]["models"]
 
-    st.subheader("OpenAI Tools")
+    # st.subheader("OpenAI Tools")
+    st.markdown(f"<img src='data:image/gif;base64,{get_local_img(FILE_ROOT / 'logo.png')}' width=200 height=200>", unsafe_allow_html=True)
 
     with st.expander("**My Organization's Users**", expanded=True):
         users_df = pd.DataFrame(users_res["data"])
@@ -602,7 +603,7 @@ async def main():
     
     with st.expander("**Whisper Playground**", expanded=True):
         # The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
-        whisper_file = st.file_uploader("Upload an audio file (Note: There's a 25 MB limit by OpenAI)", type=["flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"])
+        whisper_file = st.file_uploader("Upload an audio file _(Note: There's a 25MB limit by OpenAI)_", type=["flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"])
         # Check that the file size doesn't exceed 25MB which is OpenAI's limit
         if whisper_file is not None:
             file_size = len(whisper_file.getvalue())
