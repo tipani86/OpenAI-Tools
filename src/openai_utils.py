@@ -178,9 +178,14 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        return await self.request(
+        res = await self.request(
             openai_api_key, openai_org_id, "GET", path,
             headers=headers)
+        if isinstance(res, dict) and "error" in res:
+            return res
+        if res is None:
+            return {"error": {"message": "Data loading timeout. Possible connection error?"}}
+        return res
     
     async def view_file_contents(self,
         openai_api_key: str,
@@ -234,9 +239,14 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        return await self.request(
+        res = await self.request(
             openai_api_key, openai_org_id, "GET", path,
             headers=headers, params=params)
+        if isinstance(res, dict) and "error" in res:
+            return res
+        if res is None:
+            return {"error": {"message": "Data loading timeout. Possible connection error?"}}
+        return res
     
     async def create_finetune_job(self,
         openai_api_key: str,
@@ -273,9 +283,14 @@ class OpenAITools:
         headers = {
             "Authorization": f"Bearer {openai_api_key}",
         }
-        return await self.request(
+        res = await self.request(
             openai_api_key, openai_org_id, "GET", path,
             headers=headers)
+        if isinstance(res, dict) and "error" in res:
+            return res
+        if res is None:
+            return {"error": {"message": "Data loading timeout. Possible connection error?"}}
+        return res
     
     async def get_overall_usage(self,
         openai_api_key: str,
