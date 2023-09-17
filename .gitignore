@@ -1,3 +1,4 @@
 __pycache__
 devenv.sh
+.venv
 *.csv
