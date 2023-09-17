@@ -81,7 +81,7 @@ with st.sidebar:
         st.video("https://youtu.be/ZFMahUWQin4")
     with st.expander("On WeChat Channel", expanded=False):
         st.image(str(FILE_ROOT / "wechat_channel_video.png"), use_column_width=True)
-    st.markdown('<a href="https://www.producthunt.com/products/openai-tools/reviews?utm_source=badge-product_review&utm_medium=badge&utm_souce=badge-openai&#0045;tools" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=551389&theme=neutral" alt="OpenAI&#0032;Tools - Super&#0032;App&#0032;For&#0032;Fine&#0045;tuning&#0032;Datasets&#0044;&#0032;Jobs&#0044;&#0032;Metrics&#0032;&#0038;&#0032;Models | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>', unsafe_allow_html=True)
+    st.markdown('<a href="https://www.producthunt.com/posts/openai-tools?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-openai&#0045;tools" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=414885&theme=neutral" alt="OpenAI&#0032;Tools - Super&#0032;App&#0032;For&#0032;Fine&#0045;tuning&#0032;Datasets&#0044;&#0032;Jobs&#0044;&#0032;Metrics&#0032;&#0038;&#0032;Models | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>', unsafe_allow_html=True)
     st.markdown('<small>Page views: <img src="https://www.cutercounter.com/hits.php?id=hxncoqd&nd=4&style=2" border="0" alt="visitor counter"></small>', unsafe_allow_html=True)
     if DEBUG:
         if st.button("Reload page"):
