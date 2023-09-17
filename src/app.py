@@ -342,142 +342,142 @@ async def main():
                         )
                     file_op_submitted = st.form_submit_button("Submit")
             
-        if file_op_submitted:
-            st.session_state["file_id"] = file_id
-            if len(file_id) == 0:
-                st.error("Please enter a valid File ID.")
-            elif st.session_state["file_id"] not in files_df.id.tolist():
-                st.error(f"File ID `{st.session_state['file_id']}` not found.")
-                if "tokens_estimate" in st.session_state:
-                    del st.session_state["tokens_estimate"]
-            elif action == "review":
-                contents_res = await view_file_contents(st.session_state["file_id"])
-                if contents_res is None:
+            if file_op_submitted:
+                st.session_state["file_id"] = file_id
+                if len(file_id) == 0:
+                    st.error("Please enter a valid File ID.")
+                elif st.session_state["file_id"] not in files_df.id.tolist():
                     st.error(f"File ID `{st.session_state['file_id']}` not found.")
                     if "tokens_estimate" in st.session_state:
                         del st.session_state["tokens_estimate"]
-                elif isinstance(contents_res, dict) and "error" in contents_res:
-                    st.error(f"{contents_res['error']['message']}")
-                else:
-
-                    # Parse data
-                    try:
-                        lines = contents_res.decode("utf-8").split("\n")
-                        dataset = [json.loads(line) for line in lines]
-                        data_type = "JSONL"
-                    except:
-                        # Not a valid JSONL file, try CSV instead
-                        csv_df = pd.read_csv(StringIO(contents_res.decode("utf-8")), index_col=0)
-                        data_type = "CSV"
-
-                    st.write(f"`{st.session_state['file_id']}`")
-                    if data_type == "CSV":
+                elif action == "review":
+                    contents_res = await view_file_contents(st.session_state["file_id"])
+                    if contents_res is None:
+                        st.error(f"File ID `{st.session_state['file_id']}` not found.")
                         if "tokens_estimate" in st.session_state:
                             del st.session_state["tokens_estimate"]
-                        data_col, chart_col = st.columns(2)
-                        with data_col:
-                            st.dataframe(csv_df.sort_index(), use_container_width=True, height=600)
-                        with chart_col:
-                            loss_cols = [col for col in csv_df.columns if "loss" in col]
-                            if len(loss_cols) > 0:
-                                st.caption("Loss Curves")
-                                st.line_chart(csv_df[loss_cols], height=250)
-                            
-                            accuracy_cols = [col for col in csv_df.columns if "accuracy" in col]
-                            if len(accuracy_cols) > 0:
-                                st.caption("Accuracy Curves")
-                                st.line_chart(csv_df[accuracy_cols], height=250)
+                    elif isinstance(contents_res, dict) and "error" in contents_res:
+                        st.error(f"{contents_res['error']['message']}")
                     else:
-                        # JSONL data type
-                        st.caption("File Contents (expand below area to view each training sample and their messages)")
-                        st.json(dataset, expanded=False)
-                        check_res = check_finetune_dataset(dataset)
-                        if check_res["format_errors"]:
-                            error_msg = f"File ID `{st.session_state['file_id']}` has the following errors:\n"
-                            for error in check_res["format_errors"]:
-                                error_msg += f"- {error}: {check_res['format_errors'][error]}\n"
-                            st.error(error_msg)
+
+                        # Parse data
+                        try:
+                            lines = contents_res.decode("utf-8").split("\n")
+                            dataset = [json.loads(line) for line in lines]
+                            data_type = "JSONL"
+                        except:
+                            # Not a valid JSONL file, try CSV instead
+                            csv_df = pd.read_csv(StringIO(contents_res.decode("utf-8")), index_col=0)
+                            data_type = "CSV"
+
+                        st.write(f"`{st.session_state['file_id']}`")
+                        if data_type == "CSV":
                             if "tokens_estimate" in st.session_state:
                                 del st.session_state["tokens_estimate"]
+                            data_col, chart_col = st.columns(2)
+                            with data_col:
+                                st.dataframe(csv_df.sort_index(), use_container_width=True, height=600)
+                            with chart_col:
+                                loss_cols = [col for col in csv_df.columns if "loss" in col]
+                                if len(loss_cols) > 0:
+                                    st.caption("Loss Curves")
+                                    st.line_chart(csv_df[loss_cols], height=250)
+                                
+                                accuracy_cols = [col for col in csv_df.columns if "accuracy" in col]
+                                if len(accuracy_cols) > 0:
+                                    st.caption("Accuracy Curves")
+                                    st.line_chart(csv_df[accuracy_cols], height=250)
                         else:
-                            st.session_state["tokens_estimate"] = estimate_training_tokens(
-                                dataset = check_res["dataset"],
-                                convo_lens = check_res["convo_lens"],
-                            )
-                        if check_res["format_warnings"]:
-                            warning_msg = f"File ID `{st.session_state['file_id']}` has the following warnings:\n"
-                            for warning in check_res["format_warnings"]:
-                                warning_msg += f"- {warning}: {check_res['format_warnings'][warning]}\n"
-                            st.warning(warning_msg)
-            elif action == "delete":
-                delete_res = await delete_file(file_id)
-                if isinstance(delete_res, dict) and "error" in delete_res:
-                    st.error(f"{delete_res['error']['message']}")
-                elif delete_res is None:
-                    st.error(f"File {file_id} deletion failed")
-                elif "deleted" in delete_res and not delete_res["deleted"]:
-                    st.json(delete_res)
-                else:
-                    if "tokens_estimate" in st.session_state:
-                        del st.session_state["tokens_estimate"]
-                    st.session_state["NEED_REFRESH"] = True
-                    st.experimental_rerun()
-
-            if "tokens_estimate" in st.session_state and len(st.session_state["tokens_estimate"]) > 0:
-                tokens_estimate = st.session_state["tokens_estimate"]
-                st.info(
-                    f"Review passed. Dataset includes ~{tokens_estimate['n_billing_tokens']} tokens. By default, you'll train for {tokens_estimate['n_epochs']} epochs on this dataset. "
-                    f"It amounts to ~{tokens_estimate['n_billing_tokens'] * tokens_estimate['n_epochs']} tokens in total. Check https://openai.com/pricing to estimate total costs.",
-                    icon="✅"
-                )
-                with st.form("finetune-form", clear_on_submit=True):
-                    st.caption("**Train a Fine-tuned Model**")
-                    train_id_col, epochs_col2 = st.columns(2)
-                    with train_id_col:
-                        st.text_input("Training File ID (review another File ID to change)", value=st.session_state["file_id"], disabled=True)
-                    with epochs_col2:
-                        epochs = st.number_input(
-                            "Epochs to Train (1-25)",
-                            value=tokens_estimate["n_epochs"], min_value=1, max_value=25, step=1
-                        )
-                    val_id_col, suffix_col = st.columns(2)
-                    with val_id_col:
-                        validation_id = st.text_input(
-                            "Validation File ID (Optional)",
-                            placeholder="Enter File ID for a validation dataset",
-                            help="If you provide this file, the data is used to generate validation metrics periodically during fine-tuning. These metrics can be viewed in the fine-tuning results file. The same data should not be present in both train and validation files."
-                        )
-                    with suffix_col:
-                        suffix = st.text_input(
-                            "Custom Model Name (Optional)", 
-                            max_chars=40,
-                            help='A string of up to 40 characters that will be added to your fine-tuned model name. For example, "custom-model-name" would produce a model name like `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.'
-                        )
-                    finetune_submitted = st.form_submit_button("Start Fine-tuning Job")
-                if finetune_submitted:
-                    data = {
-                        "training_file": st.session_state["file_id"],
-                        "model": "gpt-3.5-turbo",
-                        "hyperparameters": {
-                            "n_epochs": epochs
-                        }
-                    }
-                    if len(validation_id) > 0:
-                        data["validation_file"] = validation_id
-                    if len(suffix) > 0:
-                        data["suffix"] = suffix
-                    create_finetune_job_res = await create_finetune_job(data)
-                    if isinstance(create_finetune_job_res, dict) and "error" in create_finetune_job_res:
-                        st.error(f"{create_finetune_job_res['error']['message']}")
+                            # JSONL data type
+                            st.caption("File Contents (expand below area to view each training sample and their messages)")
+                            st.json(dataset, expanded=False)
+                            check_res = check_finetune_dataset(dataset)
+                            if check_res["format_errors"]:
+                                error_msg = f"File ID `{st.session_state['file_id']}` has the following errors:\n"
+                                for error in check_res["format_errors"]:
+                                    error_msg += f"- {error}: {check_res['format_errors'][error]}\n"
+                                st.error(error_msg)
+                                if "tokens_estimate" in st.session_state:
+                                    del st.session_state["tokens_estimate"]
+                            else:
+                                st.session_state["tokens_estimate"] = estimate_training_tokens(
+                                    dataset = check_res["dataset"],
+                                    convo_lens = check_res["convo_lens"],
+                                )
+                            if check_res["format_warnings"]:
+                                warning_msg = f"File ID `{st.session_state['file_id']}` has the following warnings:\n"
+                                for warning in check_res["format_warnings"]:
+                                    warning_msg += f"- {warning}: {check_res['format_warnings'][warning]}\n"
+                                st.warning(warning_msg)
+                elif action == "delete":
+                    delete_res = await delete_file(file_id)
+                    if isinstance(delete_res, dict) and "error" in delete_res:
+                        st.error(f"{delete_res['error']['message']}")
+                    elif delete_res is None:
+                        st.error(f"File {file_id} deletion failed")
+                    elif "deleted" in delete_res and not delete_res["deleted"]:
+                        st.json(delete_res)
                     else:
-                        finetune_countdown = st.empty()
-                        for i in range(5, 0, -1):
-                            finetune_countdown.success(f"Fine-tuning job submission successful. Refreshing fine-tuning list in {i} seconds...")
-                            await asyncio.sleep(1)
                         if "tokens_estimate" in st.session_state:
                             del st.session_state["tokens_estimate"]
                         st.session_state["NEED_REFRESH"] = True
                         st.experimental_rerun()
+
+                if "tokens_estimate" in st.session_state and len(st.session_state["tokens_estimate"]) > 0:
+                    tokens_estimate = st.session_state["tokens_estimate"]
+                    st.info(
+                        f"Review passed. Dataset includes ~{tokens_estimate['n_billing_tokens']} tokens. By default, you'll train for {tokens_estimate['n_epochs']} epochs on this dataset. "
+                        f"It amounts to ~{tokens_estimate['n_billing_tokens'] * tokens_estimate['n_epochs']} tokens in total. Check https://openai.com/pricing to estimate total costs.",
+                        icon="✅"
+                    )
+                    with st.form("finetune-form", clear_on_submit=True):
+                        st.caption("**Train a Fine-tuned Model**")
+                        train_id_col, epochs_col2 = st.columns(2)
+                        with train_id_col:
+                            st.text_input("Training File ID (review another File ID to change)", value=st.session_state["file_id"], disabled=True)
+                        with epochs_col2:
+                            epochs = st.number_input(
+                                "Epochs to Train (1-25)",
+                                value=tokens_estimate["n_epochs"], min_value=1, max_value=25, step=1
+                            )
+                        val_id_col, suffix_col = st.columns(2)
+                        with val_id_col:
+                            validation_id = st.text_input(
+                                "Validation File ID (Optional)",
+                                placeholder="Enter File ID for a validation dataset",
+                                help="If you provide this file, the data is used to generate validation metrics periodically during fine-tuning. These metrics can be viewed in the fine-tuning results file. The same data should not be present in both train and validation files."
+                            )
+                        with suffix_col:
+                            suffix = st.text_input(
+                                "Custom Model Name (Optional)", 
+                                max_chars=40,
+                                help='A string of up to 40 characters that will be added to your fine-tuned model name. For example, "custom-model-name" would produce a model name like `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.'
+                            )
+                        finetune_submitted = st.form_submit_button("Start Fine-tuning Job")
+                    if finetune_submitted:
+                        data = {
+                            "training_file": st.session_state["file_id"],
+                            "model": "gpt-3.5-turbo",
+                            "hyperparameters": {
+                                "n_epochs": epochs
+                            }
+                        }
+                        if len(validation_id) > 0:
+                            data["validation_file"] = validation_id
+                        if len(suffix) > 0:
+                            data["suffix"] = suffix
+                        create_finetune_job_res = await create_finetune_job(data)
+                        if isinstance(create_finetune_job_res, dict) and "error" in create_finetune_job_res:
+                            st.error(f"{create_finetune_job_res['error']['message']}")
+                        else:
+                            finetune_countdown = st.empty()
+                            for i in range(5, 0, -1):
+                                finetune_countdown.success(f"Fine-tuning job submission successful. Refreshing fine-tuning list in {i} seconds...")
+                                await asyncio.sleep(1)
+                            if "tokens_estimate" in st.session_state:
+                                del st.session_state["tokens_estimate"]
+                            st.session_state["NEED_REFRESH"] = True
+                            st.experimental_rerun()
 
     with st.expander("**Model Playground**", expanded=True):
         models_col, chat_col = st.columns(2)
