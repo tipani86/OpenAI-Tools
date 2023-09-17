@@ -496,8 +496,8 @@ async def main():
             st.dataframe(models_df[["id", "owned_by", "root"]].sort_index(), use_container_width=True, height=300)
 
             with st.form("prompt_form", clear_on_submit=False):
-                st.caption("**Test Model Performance**")
-                model_id = st.selectbox("Model ID", models_df["id"].values, index=len(models_df) - 1)
+                st.caption("**Test Model Performance (Limited to Chat Models)**")
+                model_id = st.selectbox("Model ID", [value for value in models_df["id"].values if "gpt" in value], index=len(models_df) - 1)
                 system_prompt = st.text_input("System Prompt (Optional)", help="You can use the System Prompt to guide model behavior by giving it some instructions.")
                 prompt = st.text_area("Your Message")
                 prompt_submitted = st.form_submit_button("Send")
