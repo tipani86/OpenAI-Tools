@@ -452,8 +452,8 @@ async def main():
                         with suffix_col:
                             suffix = st.text_input(
                                 "Custom Model Name (Optional)", 
-                                max_chars=40,
-                                help='A string of up to 40 characters that will be added to your fine-tuned model name. For example, "custom-model-name" would produce a model name like `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.'
+                                max_chars=18,
+                                help='A string of up to 18 characters that will be added to your fine-tuned model name. For example, "custom-model-name" would produce a model name like `ft:gpt-3.5-turbo:openai:custom-model-name:7p4lURel`.'
                             )
                         finetune_submitted = st.form_submit_button("Start Fine-tuning Job")
                     if finetune_submitted:
