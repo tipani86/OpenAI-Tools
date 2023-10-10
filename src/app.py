@@ -3,6 +3,7 @@ import openai
 import base64
 import asyncio
 import argparse
+import traceback
 import pandas as pd
 import streamlit as st
 from io import StringIO
@@ -85,7 +86,8 @@ with st.sidebar:
     st.markdown('<small>Page views: <img src="https://www.cutercounter.com/hits.php?id=hxncoqd&nd=4&style=2" border="0" alt="visitor counter"></small>', unsafe_allow_html=True)
     if DEBUG:
         if st.button("Reload page"):
-            st.experimental_rerun()
+            st.session_state["NEED_REFRESH"] is True
+            st.rerun()
 
 # Gate the loading of the rest of the page if the user hasn't entered their credentials
 openai_api_key = st.session_state.get("openai_api_key", "")
@@ -265,7 +267,7 @@ async def main():
                 with finetune_refresh_col:
                     if st.button("Refresh List"):
                         st.session_state["NEED_REFRESH"] = True
-                        st.experimental_rerun()
+                        st.rerun()
                 with finetune_cancel_col:
                     with st.form("cancel_job_form", clear_on_submit=True):
                         job_id = st.text_input("Cancel Job :red[Immediately]", placeholder="Paste job ID from above list")
@@ -280,7 +282,7 @@ async def main():
                                 cancel_job_countdown.success(f"Cancellation submitted. Refreshing jobs list in {i} seconds...")
                                 await asyncio.sleep(1)
                             st.session_state["NEED_REFRESH"] = True
-                            st.experimental_rerun()
+                            st.rerun()
 
         with files_column:
             st.caption("Upload New `JsonLines` File(s)")
@@ -316,7 +318,7 @@ async def main():
                             upload_countdown.success(f"All files uploaded successfully. Refreshing file list in {i} seconds...")
                             await asyncio.sleep(1)
                         st.session_state["NEED_REFRESH"] = True
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error(f"{errors} file(s) had errors. Please fix them and try again.")
         
@@ -363,7 +365,7 @@ async def main():
                             # Parse data
                             try:
                                 lines = contents_res.decode("utf-8").split("\n")
-                                dataset = [json.loads(line) for line in lines]
+                                dataset = [json.loads(line) for line in lines if len(line) > 0]
                                 data_type = "JSONL"
                             except:
                                 # Not a valid JSONL file, try CSV instead
@@ -421,7 +423,7 @@ async def main():
                             if "tokens_estimate" in st.session_state:
                                 del st.session_state["tokens_estimate"]
                             st.session_state["NEED_REFRESH"] = True
-                            st.experimental_rerun()
+                            st.rerun()
 
                 if "tokens_estimate" in st.session_state and len(st.session_state["tokens_estimate"]) > 0:
                     tokens_estimate = st.session_state["tokens_estimate"]
@@ -477,7 +479,7 @@ async def main():
                             if "tokens_estimate" in st.session_state:
                                 del st.session_state["tokens_estimate"]
                             st.session_state["NEED_REFRESH"] = True
-                            st.experimental_rerun()
+                            st.rerun()
 
     with st.expander("**Model Playground**", expanded=True):
         models_col, chat_col = st.columns(2)
@@ -522,7 +524,7 @@ async def main():
             if st.button("Clear Messages"):
                 if "HISTORY" in st.session_state:
                     del st.session_state["HISTORY"]
-                st.experimental_rerun()
+                st.rerun()
         if prompt_submitted:
             if len(prompt) == 0:
                 models_col.error("Message cannot be empty.")
@@ -601,7 +603,7 @@ async def main():
                         "content": reply_text
                     })
 
-                    st.experimental_rerun()
+                    st.rerun()
     
     with st.expander("**Whisper Playground**", expanded=True):
         # The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
