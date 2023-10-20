@@ -591,6 +591,7 @@ async def main():
                                         st.markdown(reply_text)
                     except:
                         st.error(f"Error calling OpenAI API: {traceback.format_exc()}")
+                        st.stop()
 
                     # Final fixing
                     reply_text = reply_text.strip()
