@@ -572,23 +572,25 @@ async def main():
                         with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
                             loading_fn = FILE_ROOT / "loading.gif"
                             st.markdown(f"<img src='data:image/gif;base64,{get_local_img(loading_fn)}' width=30 height=10>", unsafe_allow_html=True)
+                    try:
+                        # Call the OpenAI API for final result
+                        reply_text = ""
+                        async for chunk in await openai.ChatCompletion.acreate(
+                            model=model_id,
+                            messages=st.session_state["HISTORY"],
+                            stream=True,
+                            timeout=TIMEOUT,
+                        ):
+                            content = chunk["choices"][0].get("delta", {}).get("content", None)
+                            if content is not None:
+                                reply_text += content
 
-                    # Call the OpenAI API for final result
-                    reply_text = ""
-                    async for chunk in await openai.ChatCompletion.acreate(
-                        model=model_id,
-                        messages=st.session_state["HISTORY"],
-                        stream=True,
-                        timeout=TIMEOUT,
-                    ):
-                        content = chunk["choices"][0].get("delta", {}).get("content", None)
-                        if content is not None:
-                            reply_text += content
-
-                            # Continuously render the reply as it comes in
-                            with reply_box:
-                                with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
-                                    st.markdown(reply_text)
+                                # Continuously render the reply as it comes in
+                                with reply_box:
+                                    with st.chat_message("assistant", avatar="https://openai.com/favicon.ico"):
+                                        st.markdown(reply_text)
+                    except:
+                        st.error(f"Error calling OpenAI API: {traceback.format_exc()}")
 
                     # Final fixing
                     reply_text = reply_text.strip()
