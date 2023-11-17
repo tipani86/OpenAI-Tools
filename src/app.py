@@ -38,7 +38,7 @@ def get_js() -> str:
 @st.cache_data(show_spinner=False)
 def get_css() -> str:
     # Read CSS code from style.css file
-    with open(FILE_ROOT, "src", "style.css", "r") as f:
+    with open(FILE_ROOT / "src" / "style.css", "r") as f:
         return f"<style>{f.read()}</style>"
 
 ### MAIN APP STARTS HERE ###
