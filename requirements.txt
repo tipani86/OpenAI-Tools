@@ -1,6 +1,2 @@
-stqdm
 openai
-loguru
-aiohttp
-tiktoken
 streamlit
