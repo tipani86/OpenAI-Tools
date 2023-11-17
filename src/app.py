@@ -124,27 +124,27 @@ async def main():
             input_text = st.text_area("Input text", height=200, max_chars=4096)
             tts_submitted = st.form_submit_button("Generate")
         if tts_submitted:
-            with st.spinner("Generating..."):
+            with st.spinner("Generating audio..."):
                 # Call the OpenAI API
                 response = await client.audio.speech.create(
                     model=model,
                     voice=voice,
                     input=input_text
                 )
-            buffer = io.BytesIO()
-            for chunk in response.iter_bytes(chunk_size=4096):
-                buffer.write(chunk)
-                # # Convert bytes to base64 string
-                # b64 = base64.b64encode(buffer.getvalue()).decode()
-                # if len(b64) > 0:
-                #     components.html(f"""<script>
-                #         window.parent.document.voicePlayer.src = "data:audio/mp3;base64,{b64}";
-                #         window.parent.document.voicePlayer.pause();
-                #         window.parent.document.voicePlayer.currentTime = 0;
-                #         window.parent.document.voicePlayer.play();
-                #     </script>""", height=0, width=0)
-            buffer.seek(0)
-            st.audio(buffer, format="audio/mp3")
+            # buffer = io.BytesIO()
+            # for chunk in response.iter_bytes(chunk_size=4096):
+            #     buffer.write(chunk)
+            #     # # Convert bytes to base64 string
+            #     # b64 = base64.b64encode(buffer.getvalue()).decode()
+            #     # if len(b64) > 0:
+            #     #     components.html(f"""<script>
+            #     #         window.parent.document.voicePlayer.src = "data:audio/mp3;base64,{b64}";
+            #     #         window.parent.document.voicePlayer.pause();
+            #     #         window.parent.document.voicePlayer.currentTime = 0;
+            #     #         window.parent.document.voicePlayer.play();
+            #     #     </script>""", height=0, width=0)
+            # buffer.seek(0)
+            st.audio(response.content(), format="audio/mp3")
 
 if __name__ == "__main__":
     asyncio.run(main())
