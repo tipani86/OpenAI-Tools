@@ -134,16 +134,17 @@ async def main():
             buffer = io.BytesIO()
             for chunk in response.iter_bytes(chunk_size=4096):
                 buffer.write(chunk)
-                # Convert bytes to base64 string
-                b64 = base64.b64encode(buffer.getvalue()).decode()
-                if len(b64) > 0:
-                    components.html(f"""<script>
-                        window.parent.document.voicePlayer.src = "data:audio/mp3;base64,{b64}";
-                        window.parent.document.voicePlayer.pause();
-                        window.parent.document.voicePlayer.currentTime = 0;
-                        window.parent.document.voicePlayer.play();
-                    </script>""", height=0, width=0)
+                # # Convert bytes to base64 string
+                # b64 = base64.b64encode(buffer.getvalue()).decode()
+                # if len(b64) > 0:
+                #     components.html(f"""<script>
+                #         window.parent.document.voicePlayer.src = "data:audio/mp3;base64,{b64}";
+                #         window.parent.document.voicePlayer.pause();
+                #         window.parent.document.voicePlayer.currentTime = 0;
+                #         window.parent.document.voicePlayer.play();
+                #     </script>""", height=0, width=0)
             buffer.seek(0)
+            st.audio(buffer, format="audio/mp3")
 
 if __name__ == "__main__":
     asyncio.run(main())
