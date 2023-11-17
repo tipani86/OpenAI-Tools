@@ -34,6 +34,11 @@ def create_download_link(data, filename):
     return href
 
 @st.cache_data(show_spinner=False)
+def get_local_img(file_path: Path) -> str:
+    # Load a byte image and return its base64 encoded string
+    return base64.b64encode(open(file_path, "rb").read()).decode("utf-8")
+
+@st.cache_data(show_spinner=False)
 def get_css() -> str:
     # Read CSS code from style.css file
     with open(FILE_ROOT / "style.css", "r") as f:
@@ -84,7 +89,9 @@ async def main():
 
     ### Main content ###
 
-    with st.expander("**Whisper (Speech-To-Text) Playground**", expanded=True):
+    st.markdown(f"<img src='data:image/gif;base64,{get_local_img(FILE_ROOT / 'logo.png')}' width=200 height=200>", unsafe_allow_html=True)
+
+    with st.expander("**Whisper (Speech-to-Text) Playground**", expanded=True):
         # The audio file object (not file name) to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm.
         whisper_file = st.file_uploader("Upload an audio file _(Note: There's a 25MB limit by OpenAI)_", type=["flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "wav", "webm"])
         # Check that the file size doesn't exceed 25MB which is OpenAI's limit
@@ -104,7 +111,7 @@ async def main():
                     st.caption("Transcription complete.")
                     st.text_area("Transcript", transcript["text"] if "text" in transcript else transcript, height=200)
 
-    with st.expander("**Speech (TTS) Playground**", expanded=True):
+    with st.expander("**Speech (Text-to-Speech) Playground**", expanded=True):
         with st.form(key="tts_form", clear_on_submit=False):
             options_cols = st.columns(2)
             with options_cols[0]:
@@ -130,15 +137,15 @@ async def main():
                     input=input_text,
                     speed=speed
                 )
-            audio = response.read()
-            st.audio(audio, format="audio/mp3")
-            st.markdown(
-                create_download_link(
-                    audio,
-                    f"openai-tts-{UTC_TIMESTAMP}.mp3",
-                ),
-                unsafe_allow_html=True
-            )
+                audio = response.read()
+                st.audio(audio, format="audio/mp3")
+                st.markdown(
+                    create_download_link(
+                        audio,
+                        f"openai-tts-{UTC_TIMESTAMP}.mp3",
+                    ),
+                    unsafe_allow_html=True
+                )
 
 if __name__ == "__main__":
     asyncio.run(main())

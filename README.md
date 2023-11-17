@@ -11,4 +11,4 @@ _You can still check out the old code in the_ `Pre-1.0 branch`.
 
 ## Speech
 
-The completely revamped app is now focusing on both speech recognition (Whisper) and and generation (TTS).
+The completely revamped app is now focusing on both speech recognition (Whisper) and generation (TTS).
