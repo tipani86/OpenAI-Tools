@@ -1,4 +1,5 @@
 import os
+import base64
 import asyncio
 import argparse
 import streamlit as st
@@ -22,6 +23,15 @@ tts_lookup = {
 }
 def tts_format_func(option):
     return tts_lookup[option]
+
+def create_download_link(data, filename):
+    if isinstance(data, bytes):
+        b64 = base64.b64encode(data).decode()
+    else:
+        b64 = base64.b64encode(data.encode()).decode()
+    ext = Path(filename).suffix[1:]
+    href = f'<a href="data:file/{ext};base64,{b64}" download="{filename}">Download as {ext} file</a>'
+    return href
 
 @st.cache_data(show_spinner=False)
 def get_css() -> str:
@@ -109,6 +119,7 @@ async def main():
                     "nova", 
                     "shimmer"
                 ])
+                speed = st.number_input("Speed (0.25 - 4x)", min_value=0.25, max_value=4.0, value=1.0, step=0.25)
             input_text = st.text_area("Input text", height=200, max_chars=4096)
             tts_submitted = st.form_submit_button("Generate")
         if tts_submitted:
@@ -117,9 +128,18 @@ async def main():
                 response = await client.audio.speech.create(
                     model=model,
                     voice=voice,
-                    input=input_text
+                    input=input_text,
+                    speed=speed
                 )
-            st.audio(response.read(), format="audio/mp3")
+            audio = response.read()
+            st.audio(audio, format="audio/mp3")
+            st.markdown(
+                create_download_link(
+                    audio,
+                    f"openai-tts-{UTC_TIMESTAMP}.mp3",
+                ),
+                unsafe_allow_html=True
+            )
 
 if __name__ == "__main__":
     asyncio.run(main())
