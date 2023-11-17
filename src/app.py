@@ -46,7 +46,6 @@ async def main():
     # Define overall layout
     st.set_page_config(
         page_title="OpenAI Tools",
-        page_icon="https://openaiapi-site.azureedge.net/public-assets/d/e90ac348d3/favicon.png",
         initial_sidebar_state=st.session_state.get('sidebar_state', 'expanded'),
         layout="wide"
     )
