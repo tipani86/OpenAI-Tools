@@ -1,13 +1,10 @@
 import os
-import io
-import base64
 import asyncio
 import argparse
 import streamlit as st
 from pathlib import Path
-from openai import AsyncOpenAI
 from datetime import datetime
-import streamlit.components.v1 as components
+from openai import AsyncOpenAI
 
 UTC_TIMESTAMP = int(datetime.utcnow().timestamp())
 
@@ -25,15 +22,6 @@ tts_lookup = {
 }
 def tts_format_func(option):
     return tts_lookup[option]
-
-@st.cache_data(show_spinner=False)
-def get_js() -> str:
-    # Read javascript web trackers code from script.js file
-    with open(FILE_ROOT / "script.js", "r") as f:
-        return f"""
-            <audio id="voicePlayer" autoplay #voicePlayer></audio>
-            <script type='text/javascript'>{f.read()}</script>
-        """
 
 @st.cache_data(show_spinner=False)
 def get_css() -> str:
@@ -131,20 +119,7 @@ async def main():
                     voice=voice,
                     input=input_text
                 )
-            # buffer = io.BytesIO()
-            # for chunk in response.iter_bytes(chunk_size=4096):
-            #     buffer.write(chunk)
-            #     # # Convert bytes to base64 string
-            #     # b64 = base64.b64encode(buffer.getvalue()).decode()
-            #     # if len(b64) > 0:
-            #     #     components.html(f"""<script>
-            #     #         window.parent.document.voicePlayer.src = "data:audio/mp3;base64,{b64}";
-            #     #         window.parent.document.voicePlayer.pause();
-            #     #         window.parent.document.voicePlayer.currentTime = 0;
-            #     #         window.parent.document.voicePlayer.play();
-            #     #     </script>""", height=0, width=0)
-            # buffer.seek(0)
-            st.audio(response.content(), format="audio/mp3")
+            st.audio(response.read(), format="audio/mp3")
 
 if __name__ == "__main__":
     asyncio.run(main())
