@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import streamlit as st
 from pathlib import Path
-from openai import OpenAI
+from openai import AsyncOpenAI
 from datetime import datetime
 import streamlit.components.v1 as components
 
@@ -83,7 +83,7 @@ async def main():
         st.stop()
 
     # Set up OpenAI API client
-    client = OpenAI(api_key=openai_api_key)
+    client = AsyncOpenAI(api_key=openai_api_key)
 
     ### Main content ###
 
