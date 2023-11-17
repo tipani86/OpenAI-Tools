@@ -100,7 +100,7 @@ async def main():
                 if whisper_submitted:
                     with st.spinner("Transcribing..."):
                         # Call the OpenAI API
-                        transcript = await client.audio.transcriptions.acreate(
+                        transcript = await client.audio.transcriptions.create(
                             model="whisper-1",  # Only this one available for now
                             file=whisper_file
                         )
@@ -126,7 +126,7 @@ async def main():
         if tts_submitted:
             with st.spinner("Generating..."):
                 # Call the OpenAI API
-                response = await client.audio.speech.acreate(
+                response = await client.audio.speech.create(
                     model=model,
                     voice=voice,
                     input=input_text
