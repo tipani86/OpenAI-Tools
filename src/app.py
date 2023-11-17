@@ -1,13 +1,11 @@
 import os
 import io
-import uuid
 import base64
 import asyncio
 import argparse
 import streamlit as st
 from pathlib import Path
 from openai import OpenAI
-from openai_utils import *
 from datetime import datetime
 import streamlit.components.v1 as components
 
@@ -124,7 +122,7 @@ async def main():
                     "nova", 
                     "shimmer"
                 ])
-            input_text = st.text_area("Input text", height=300)
+            input_text = st.text_area("Input text", height=300, max_chars=4096)
             tts_submitted = st.form_submit_button("Generate")
         if tts_submitted:
             with st.spinner("Generating..."):
