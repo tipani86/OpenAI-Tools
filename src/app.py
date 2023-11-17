@@ -102,13 +102,12 @@ async def main():
                         # Call the OpenAI API
                         transcript = await client.audio.transcriptions.acreate(
                             model="whisper-1",  # Only this one available for now
-                            file=whisper_file,
-                            timeout=TIMEOUT,
+                            file=whisper_file
                         )
                     st.caption("Transcription complete.")
                     st.text_area("Transcript", transcript["text"] if "text" in transcript else transcript, height=200)
 
-    with st.expander("**Speech (TTS) Playground", expanded=True):
+    with st.expander("**Speech (TTS) Playground**", expanded=True):
         with st.form(key="tts_form", clear_on_submit=False):
             options_cols = st.columns(2)
             with options_cols[0]:
@@ -122,7 +121,7 @@ async def main():
                     "nova", 
                     "shimmer"
                 ])
-            input_text = st.text_area("Input text", height=300, max_chars=4096)
+            input_text = st.text_area("Input text", height=200, max_chars=4096)
             tts_submitted = st.form_submit_button("Generate")
         if tts_submitted:
             with st.spinner("Generating..."):
@@ -130,8 +129,7 @@ async def main():
                 response = await client.audio.speech.acreate(
                     model=model,
                     voice=voice,
-                    input=input_text,
-                    timeout=TIMEOUT,
+                    input=input_text
                 )
             buffer = io.BytesIO()
             for chunk in response.iter_bytes(chunk_size=4096):
