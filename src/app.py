@@ -29,7 +29,7 @@ def tts_format_func(option):
 @st.cache_data(show_spinner=False)
 def get_js() -> str:
     # Read javascript web trackers code from script.js file
-    with open(FILE_ROOT / "src" / "script.js", "r") as f:
+    with open(FILE_ROOT / "script.js", "r") as f:
         return f"""
             <audio id="voicePlayer" autoplay #voicePlayer></audio>
             <script type='text/javascript'>{f.read()}</script>
@@ -38,7 +38,7 @@ def get_js() -> str:
 @st.cache_data(show_spinner=False)
 def get_css() -> str:
     # Read CSS code from style.css file
-    with open(FILE_ROOT / "src" / "style.css", "r") as f:
+    with open(FILE_ROOT / "style.css", "r") as f:
         return f"<style>{f.read()}</style>"
 
 ### MAIN APP STARTS HERE ###
