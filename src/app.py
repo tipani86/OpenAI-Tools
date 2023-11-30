@@ -109,7 +109,11 @@ async def main():
                             file=whisper_file
                         )
                     st.caption("Transcription complete.")
-                    st.text_area("Transcript", transcript["text"] if "text" in transcript else transcript, height=200)
+                    try:
+                        transcript = transcript.text
+                    except:
+                        transcript = transcript["text"] if "text" in transcript else transcript
+                    st.text_area("Transcript", transcript, height=200)
 
     with st.expander("**Speech (Text-to-Speech) Playground**", expanded=True):
         with st.form(key="tts_form", clear_on_submit=False):
