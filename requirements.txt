@@ -1,2 +1,7 @@
-openai
 streamlit
+httpx
+pandas
+stqdm
+async-lru
+numpy<2.0
+loguru
