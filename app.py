@@ -58,6 +58,16 @@ async def main_async():
         help="Enter your OpenAI Admin API key. If OPENAI_ADMIN_KEY environment variable is set, it will be pre-populated."
     )
     
+    # Author's security note
+    st.sidebar.markdown("""
+    _**Author's Note:** While I can only claim that your credentials are not stored anywhere, for maximum security, you should generate a new app-specific and read only API key on your account and use it here. This way, you can deactivate the key after you don't plan to use the app anymore, and it won't affect any of your other keys/apps. You can check out the GitHub source for this app using below button:_
+    """)
+    
+    # GitHub repository badge
+    st.sidebar.markdown("""
+    [![GitHub](https://img.shields.io/github/stars/tipani86/OpenAI-Tools)](https://github.com/tipani86/OpenAI-Tools)
+    """)
+    
     # Cache management
     st.sidebar.header("Cache Management")
     if st.sidebar.button("🗑️ Clear All Cache", help="Clear cached API responses and session data"):
