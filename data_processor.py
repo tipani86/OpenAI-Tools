@@ -47,12 +47,17 @@ def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
         "input_cached_tokens", "input_audio_tokens", "output_audio_tokens", 
         "model", "start_time", "user_email", "num_model_requests"
     ]
+
+    # Banned columns
+    banned_columns = [
+        "object", "user_id", "batch"
+    ]
     
     # Get columns that exist in the dataframe from the preferred order
     existing_preferred = [col for col in preferred_order if col in df.columns]
     
-    # Get remaining columns not in the preferred order
-    remaining_columns = [col for col in df.columns if col not in preferred_order]
+    # Get remaining columns not in the preferred order (those which are not banned)
+    remaining_columns = [col for col in df.columns if (col not in preferred_order and col not in banned_columns)]
     
     # Combine preferred columns (leftmost) with remaining columns (rightmost)
     final_order = existing_preferred + remaining_columns

@@ -55,12 +55,12 @@ async def main_async():
         "OpenAI Admin API Key",
         value=env_api_key,
         type="password",
-        help="Enter your OpenAI Admin API key. If OPENAI_ADMIN_KEY environment variable is set, it will be pre-populated."
+        help="Enter your [OpenAI Admin API key](https://platform.openai.com/settings/organization/admin-keys). If OPENAI_ADMIN_KEY environment variable is set, it will be pre-populated."
     )
     
     # Author's security note
     st.sidebar.markdown("""
-    _**Author's Note:** While I can only claim that your credentials are not stored anywhere, for maximum security, you should generate a new app-specific and read only API key on your account and use it here. This way, you can deactivate the key after you don't plan to use the app anymore, and it won't affect any of your other keys/apps. You can check out the GitHub source for this app using below button:_
+    _**Author's Note:** While I can only claim that your credentials are not stored anywhere, for maximum security, you should generate a new app-specific and read only [Admin API key](https://platform.openai.com/settings/organization/admin-keys) on your account and use it here. This way, you can deactivate the key after you don't plan to use the app anymore, and it won't affect any of your other keys/apps. You can check out the GitHub source for this app using below button:_
     """)
     
     # GitHub repository badge
@@ -84,19 +84,19 @@ async def main_async():
     
     # Form for user inputs
     with st.form("usage_form"):
-        st.subheader("Query Parameters")
+        st.subheader("Settings")
         
         # Date range picker
         col1, col2 = st.columns(2)
         with col1:
             start_date = st.date_input(
-                "Start Date",
+                "Start Date (inclusive)",
                 value=date.today() - timedelta(days=7),
                 help="Start date for usage data (inclusive)"
             )
         with col2:
             end_date = st.date_input(
-                "End Date", 
+                "End Date (**exclusive**; for monthly reports, select the first day of the _second_ month)", 
                 value=date.today(),
                 help="End date for usage data (exclusive)"
             )
@@ -179,9 +179,6 @@ async def main_async():
                 client.fetch_lookup_data("api_keys", LOOKUP_ENDPOINTS["api_keys"])
             ]
             user_lookup, project_lookup, api_key_lookup = await stqdm.gather(*lookup_tasks)
-            
-            # Cleanup API client
-            await client.close()
             
             # Display cache statistics only in debug mode
             if os.getenv("LOGURU_LEVEL") == "DEBUG":
