@@ -43,7 +43,8 @@ async def main_async():
     st.set_page_config(
         page_title="OpenAI Usage API Dashboard",
         page_icon="📊",
-        layout="wide"
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
     
     # Sidebar with API key
